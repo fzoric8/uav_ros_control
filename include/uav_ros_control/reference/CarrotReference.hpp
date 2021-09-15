@@ -145,6 +145,9 @@ private:
   /** Carrot enable button value, 0 or 1 **/
   int _carrotEnabledValue = 1;
 
+  /** Frame ID for the Carrot reference **/
+  std::string _frameId;
+
   /* First pass flag - set carrot to odometry */
   bool _firstPass = true;
   bool _manualTakeoffEnabled = true;

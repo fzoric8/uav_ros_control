@@ -14,15 +14,15 @@
 #define CARROT_ON_AIR "CARROT_ON_AIR"
 #define POS_HOLD "HOLD"
 
-uav_reference::CarrotReference::CarrotReference(ros::NodeHandle &nh)
+uav_reference::CarrotReference::CarrotReference(ros::NodeHandle& nh)
   : m_handlerState(nh, "mavros/state"), uav_reference::JoyControlInput(nh)
 {
   // Define Publishers
   _pubCarrotTrajectorySp =
     nh.advertise<trajectory_msgs::MultiDOFJointTrajectoryPoint>("carrot/trajectory", 1);
-  _pubCarrotYawSp = nh.advertise<std_msgs::Float64>("carrot/yaw", 1);
-  _pubUAVYaw = nh.advertise<std_msgs::Float64>("uav/yaw", 1);
-  _pubCarrotPose = nh.advertise<geometry_msgs::PoseStamped>("carrot/pose", 1);
+  _pubCarrotYawSp  = nh.advertise<std_msgs::Float64>("carrot/yaw", 1);
+  _pubUAVYaw       = nh.advertise<std_msgs::Float64>("uav/yaw", 1);
+  _pubCarrotPose   = nh.advertise<geometry_msgs::PoseStamped>("carrot/pose", 1);
   _pubCarrotStatus = nh.advertise<std_msgs::String>("carrot/status", 1);
 
   // Define Subscribers
@@ -50,15 +50,15 @@ uav_reference::CarrotReference::CarrotReference(ros::NodeHandle &nh)
   }
 
   // Initialize references
-  _carrotPoint.transforms = std::vector<geometry_msgs::Transform>(1);
-  _carrotPoint.velocities = std::vector<geometry_msgs::Twist>(1);
+  _carrotPoint.transforms    = std::vector<geometry_msgs::Transform>(1);
+  _carrotPoint.velocities    = std::vector<geometry_msgs::Twist>(1);
   _carrotPoint.accelerations = std::vector<geometry_msgs::Twist>(1);
 }
 
 uav_reference::CarrotReference::~CarrotReference() {}
 
-bool uav_reference::CarrotReference::posHoldServiceCb(std_srvs::Empty::Request &request,
-  std_srvs::Empty::Response &response)
+bool uav_reference::CarrotReference::posHoldServiceCb(std_srvs::Empty::Request&  request,
+                                                      std_srvs::Empty::Response& response)
 {
   if (!_carrotEnabled) {
     ROS_FATAL(
@@ -83,8 +83,8 @@ bool uav_reference::CarrotReference::posHoldServiceCb(std_srvs::Empty::Request &
   return true;
 }
 
-bool uav_reference::CarrotReference::landServiceCb(std_srvs::SetBool::Request &request,
-  std_srvs::SetBool::Response &response)
+bool uav_reference::CarrotReference::landServiceCb(std_srvs::SetBool::Request&  request,
+                                                   std_srvs::SetBool::Response& response)
 {
   const auto set_response = [&response](bool success) { response.success = success; };
 
@@ -120,7 +120,7 @@ bool uav_reference::CarrotReference::landServiceCb(std_srvs::SetBool::Request &r
   }
 
   // Assume we want to land at this point
-  mavros_msgs::SetMode::Request landMode_req;
+  mavros_msgs::SetMode::Request  landMode_req;
   mavros_msgs::SetMode::Response landMode_resp;
   landMode_req.custom_mode = "LAND";
 
@@ -138,8 +138,8 @@ bool uav_reference::CarrotReference::landServiceCb(std_srvs::SetBool::Request &r
 }
 
 bool uav_reference::CarrotReference::takeoffServiceCb(
-  uav_ros_msgs::TakeOff::Request &request,
-  uav_ros_msgs::TakeOff::Response &response)
+  uav_ros_msgs::TakeOff::Request&  request,
+  uav_ros_msgs::TakeOff::Response& response)
 {
   const auto set_response = [&response](bool success) {
     response.success = success;
@@ -182,9 +182,9 @@ bool uav_reference::CarrotReference::takeoffServiceCb(
   resetCarrot();
   _carrotPoint.transforms[0].translation.z = _uavPos[2] + request.rel_alt;
 
-  _positionHold = true;
+  _positionHold    = true;
   _takeoffHappened = true;
-  _carrotOnLand = false;
+  _carrotOnLand    = false;
   ROS_INFO("CarrotReference::takeoffServiceCb - enable position hold");
 
   set_response(true);
@@ -192,14 +192,14 @@ bool uav_reference::CarrotReference::takeoffServiceCb(
 }
 
 void uav_reference::CarrotReference::positionRefCb(
-  const trajectory_msgs::MultiDOFJointTrajectoryPointConstPtr &posMsg)
+  const trajectory_msgs::MultiDOFJointTrajectoryPointConstPtr& posMsg)
 {
   if (_positionHold) {
     _carrotPoint = *posMsg;
-    _carrotYaw = ros_convert::calculateYaw(posMsg->transforms[0].rotation.x,
-      posMsg->transforms[0].rotation.y,
-      posMsg->transforms[0].rotation.z,
-      posMsg->transforms[0].rotation.w);
+    _carrotYaw   = ros_convert::calculateYaw(posMsg->transforms[0].rotation.x,
+                                           posMsg->transforms[0].rotation.y,
+                                           posMsg->transforms[0].rotation.z,
+                                           posMsg->transforms[0].rotation.w);
     ROS_WARN_THROTTLE(5.0, "CarrotReference - Trajectory reference received");
   } else {
     ROS_FATAL(
@@ -210,7 +210,7 @@ void uav_reference::CarrotReference::positionRefCb(
 
 void uav_reference::CarrotReference::resetIntegrators()
 {
-  std_srvs::Empty::Request req;
+  std_srvs::Empty::Request  req;
   std_srvs::Empty::Response resp;
   if (!_intResetClient.call(req, resp)) {
     ROS_FATAL("CarrotReference - Unable to reset integrators");
@@ -230,7 +230,8 @@ void uav_reference::CarrotReference::updateCarrot()
   }
 
   if (_positionHold) {
-    ROS_INFO_THROTTLE(10.0, "CarrotReference::update - listen to position_hold/trajectory.");
+    ROS_INFO_THROTTLE(10.0,
+                      "CarrotReference::update - listen to position_hold/trajectory.");
     return;
   }
 
@@ -248,9 +249,9 @@ void uav_reference::CarrotReference::updateCarrot()
 
 void uav_reference::CarrotReference::resetCarrot()
 {
-  _carrotPoint.transforms = std::vector<geometry_msgs::Transform>(1);
-  _carrotPoint.velocities = std::vector<geometry_msgs::Twist>(1);
-  _carrotPoint.accelerations = std::vector<geometry_msgs::Twist>(1);
+  _carrotPoint.transforms                  = std::vector<geometry_msgs::Transform>(1);
+  _carrotPoint.velocities                  = std::vector<geometry_msgs::Twist>(1);
+  _carrotPoint.accelerations               = std::vector<geometry_msgs::Twist>(1);
   _carrotPoint.transforms[0].translation.x = _uavPos[0];
   _carrotPoint.transforms[0].translation.y = _uavPos[1];
   _carrotPoint.transforms[0].translation.z = _uavPos[2];
@@ -266,7 +267,7 @@ void uav_reference::CarrotReference::resetCarrot()
 }
 
 
-void uav_reference::CarrotReference::odomCb(const nav_msgs::OdometryConstPtr &msg)
+void uav_reference::CarrotReference::odomCb(const nav_msgs::OdometryConstPtr& msg)
 {
   double qx = msg->pose.pose.orientation.x;
   double qy = msg->pose.pose.orientation.y;
@@ -337,11 +338,11 @@ void uav_reference::CarrotReference::publishCarrotSetpoint()
   _pubCarrotTrajectorySp.publish(_carrotPoint);
 
   geometry_msgs::PoseStamped pose;
-  pose.header.frame_id = "world";
-  pose.header.stamp = ros::Time::now();
-  pose.pose.position.x = _carrotPoint.transforms[0].translation.x;
-  pose.pose.position.y = _carrotPoint.transforms[0].translation.y;
-  pose.pose.position.z = _carrotPoint.transforms[0].translation.z;
+  pose.header.frame_id    = _frameId;
+  pose.header.stamp       = ros::Time::now();
+  pose.pose.position.x    = _carrotPoint.transforms[0].translation.x;
+  pose.pose.position.y    = _carrotPoint.transforms[0].translation.y;
+  pose.pose.position.z    = _carrotPoint.transforms[0].translation.z;
   pose.pose.orientation.x = q.getX();
   pose.pose.orientation.y = q.getY();
   pose.pose.orientation.z = q.getZ();
@@ -359,19 +360,20 @@ void uav_reference::CarrotReference::initializeParameters()
   ROS_WARN("CarrotReference::initializeParameters()");
 
   ros::NodeHandle nhPrivate("~");
-  bool initialized = nhPrivate.getParam("carrot_index", _carrotEnabledIndex)
+  bool            initialized = nhPrivate.getParam("carrot_index", _carrotEnabledIndex)
                      && nhPrivate.getParam("carrot_enable", _carrotEnabledValue)
-                     && nhPrivate.getParam("manual_takeoff", _manualTakeoffEnabled);
+                     && nhPrivate.getParam("manual_takeoff", _manualTakeoffEnabled)
+                     && nhPrivate.getParam("frame_id", _frameId);
 
   ROS_INFO("CarrotReference::initializeParameters() - carrot button enable index is %d",
-    _carrotEnabledIndex);
+           _carrotEnabledIndex);
   ROS_INFO("CarrotReference::initializeParameters() - carrot enable value is %d",
-    _carrotEnabledValue);
+           _carrotEnabledValue);
 
   ROS_WARN_COND(_manualTakeoffEnabled,
-    "CarrotReference::initializeParameters() - manual takeoff enabled");
+                "CarrotReference::initializeParameters() - manual takeoff enabled");
   ROS_WARN_COND(!_manualTakeoffEnabled,
-    "CarrotReference::initializeParameters() - automatic takeoff enabled");
+                "CarrotReference::initializeParameters() - automatic takeoff enabled");
 
   if (!initialized) {
     ROS_FATAL(
@@ -395,14 +397,14 @@ void uav_reference::CarrotReference::updateCarrotStatus()
   if (getJoyButtons()[_carrotEnabledIndex] == _carrotEnabledValue && !_carrotEnabled) {
     if (_manualTakeoffEnabled || _takeoffHappened) {
       _carrotEnabled = true;
-      _carrotOnLand = false;
+      _carrotOnLand  = false;
       ROS_INFO("CarrotReference::updateCarrotStatus - CARROT_ON_AIR enabled.");
       resetIntegrators();
       resetCarrot();
     } else if (!_carrotOnLand) {
       ROS_INFO("CarrotReference::updateCarrotStatus - CARROT_ON_LAND enabled.");
       _carrotEnabled = true;
-      _carrotOnLand = true;
+      _carrotOnLand  = true;
       resetIntegrators();
       resetCarrot();
     }
@@ -412,8 +414,8 @@ void uav_reference::CarrotReference::updateCarrotStatus()
   if (getJoyButtons()[_carrotEnabledIndex] == (1 - _carrotEnabledValue)
       && _carrotEnabled) {
     _carrotEnabled = false;
-    _positionHold = false;
-    _carrotOnLand = false;
+    _positionHold  = false;
+    _carrotOnLand  = false;
     resetIntegrators();
     ROS_INFO("CarrotRefernce::updateCarrotStatus - carrot disabled.\n");
   }
@@ -439,10 +441,10 @@ bool uav_reference::CarrotReference::isCarrotEnabled() { return _carrotEnabled; 
 
 bool uav_reference::CarrotReference::isHoldEnabled() { return _positionHold; }
 
-void uav_reference::runDefault(uav_reference::CarrotReference &carrotRefObj,
-  ros::NodeHandle &nh)
+void uav_reference::runDefault(uav_reference::CarrotReference& carrotRefObj,
+                               ros::NodeHandle&                nh)
 {
-  double rate = 50;
+  double    rate = 50;
   ros::Rate loopRate(rate);
 
   while (ros::ok()) {
