@@ -1,15 +1,17 @@
 #ifndef CARROT_REFERENCE_H
 #define CARROT_REFERENCE_H
 
-#include <uav_ros_control/reference/JoyControlInput.hpp>
+#include "ros/forwards.h"
 #include <geometry_msgs/Vector3.h>
+#include <mavros_msgs/State.h>
 #include <nav_msgs/Odometry.h>
 #include <std_srvs/Empty.h>
 #include <std_srvs/SetBool.h>
-#include <uav_ros_msgs/TakeOff.h>
-#include <mavros_msgs/State.h>
-#include <uav_ros_lib/topic_handler.hpp>
 #include <trajectory_msgs/MultiDOFJointTrajectoryPoint.h>
+#include <uav_ros_msgs/TakeOff.h>
+
+#include <uav_ros_control/reference/JoyControlInput.hpp>
+#include <uav_ros_lib/topic_handler.hpp>
 
 namespace uav_reference {
 /**
@@ -23,7 +25,7 @@ public:
    * Default constructor. Used for reading ROS parameters and initalizing
    * private variables.
    */
-  CarrotReference(ros::NodeHandle &);
+  CarrotReference(ros::NodeHandle&);
   virtual ~CarrotReference();
 
   /**
@@ -60,7 +62,6 @@ private:
    * Initialize class parameters.
    */
   void initializeParameters();
-
 
   /**
    * Update x and y component of carrot position setpoint with the given value.
@@ -102,24 +103,25 @@ private:
   /**
    * Position hold service callback.OS
    */
-  bool posHoldServiceCb(std_srvs::Empty::Request &request,
-    std_srvs::Empty::Response &response);
+  bool posHoldServiceCb(std_srvs::Empty::Request&  request,
+                        std_srvs::Empty::Response& response);
 
-  bool takeoffServiceCb(uav_ros_msgs::TakeOff::Request &request,
-    uav_ros_msgs::TakeOff::Response &response);
+  bool takeoffServiceCb(uav_ros_msgs::TakeOff::Request&  request,
+                        uav_ros_msgs::TakeOff::Response& response);
 
-  bool landServiceCb(std_srvs::SetBool::Request &request,
-    std_srvs::SetBool::Response &response);
+  bool landServiceCb(std_srvs::SetBool::Request&  request,
+                     std_srvs::SetBool::Response& response);
 
   /**
-   * Callback function for Position reference. Works only during position hold mode.
+   * Callback function for Position reference. Works only during position hold
+   * mode.
    */
-  void positionRefCb(const trajectory_msgs::MultiDOFJointTrajectoryPointConstPtr &posMsg);
+  void positionRefCb(const trajectory_msgs::MultiDOFJointTrajectoryPointConstPtr& posMsg);
 
   /**
    * Odometry callback function. Used for extracting UAV yaw rotation.
    */
-  void odomCb(const nav_msgs::OdometryConstPtr &);
+  void odomCb(const nav_msgs::OdometryConstPtr&);
 
   /** Carrot reference used for position hold. */
   trajectory_msgs::MultiDOFJointTrajectoryPoint _carrotPoint;
@@ -149,9 +151,11 @@ private:
   std::string _frameId;
 
   /* First pass flag - set carrot to odometry */
-  bool _firstPass = true;
+  bool _firstPass            = true;
   bool _manualTakeoffEnabled = true;
-  bool _carrotOnLand = false, _takeoffHappened = false;
+  bool _carrotLandEnabled    = true;
+  bool _carrotOnLand         = false;
+  bool _takeoffHappened      = false;
 
   /** Define all Publishers */
   ros::Publisher _pubCarrotTrajectorySp;
@@ -161,8 +165,8 @@ private:
   ros::Publisher _pubCarrotStatus;
 
   /** Define all Subscribers. */
-  ros::Subscriber _subOdom;
-  ros::Subscriber _subPosHoldRef;
+  ros::Subscriber                            _subOdom;
+  ros::Subscriber                            _subPosHoldRef;
   ros_util::TopicHandler<mavros_msgs::State> m_handlerState;
 
   /** Define all the services */
@@ -170,6 +174,15 @@ private:
 
   /* Reset integrator client */
   ros::ServiceClient _intResetClient, _setModeToLandClient;
+
+  /* Define timers */
+  ros::Timer _carrotTakeoffTimer;
+  double     _takeoff_altitude_request = 2.0;
+  void       takeoff_loop(const ros::TimerEvent& e);
+
+  ros::Timer _carrotLandTimer;
+  double     _land_altitude_request = 0.0;
+  void       land_loop(const ros::TimerEvent& e);
 };
 
 /**
@@ -178,7 +191,7 @@ private:
  * @param cc - Reference to CarrotReference object
  * @param nh - Given NodeHandle
  */
-void runDefault(uav_reference::CarrotReference &cc, ros::NodeHandle &nh);
+void runDefault(uav_reference::CarrotReference& cc, ros::NodeHandle& nh);
 }// namespace uav_reference
 
 #endif /** CARROT_REFERENCE_H */
