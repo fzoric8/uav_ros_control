@@ -137,6 +137,7 @@ bool uav_reference::CarrotReference::landServiceCb(std_srvs::SetBool::Request&  
       return true;
     }
 
+    resetCarrot();
     _carrotLandTimer.start();
     ROS_INFO("CarrotReference::landServiceCb - Carrot Land started");
     set_response(true);
@@ -510,6 +511,7 @@ void uav_reference::CarrotReference::land_loop(const ros::TimerEvent& e)
     return;
   }
 
+  ROS_INFO_THROTTLE(2.0, "CarrotReference::land_loop");
   _carrotPoint.transforms[0].translation.z -= LAND_SPEED * CARROT_DT;
 
   if (!m_handlerState.getData().armed) {
