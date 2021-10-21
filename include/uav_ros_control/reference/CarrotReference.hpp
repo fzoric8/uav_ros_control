@@ -21,6 +21,8 @@ namespace uav_reference {
 class CarrotReference : public uav_reference::JoyControlInput
 {
 public:
+  constexpr static double CARROT_DT = 0.02;
+
   /**
    * Default constructor. Used for reading ROS parameters and initalizing
    * private variables.
@@ -56,7 +58,7 @@ public:
   bool isHoldEnabled();
 
 private:
-  void resetIntegrators();
+  bool resetIntegrators();
 
   /**
    * Initialize class parameters.
@@ -183,6 +185,10 @@ private:
   ros::Timer _carrotLandTimer;
   double     _land_altitude_request = 0.0;
   void       land_loop(const ros::TimerEvent& e);
+
+  const double TAKEOFF_SPEED          = 0.3;
+  const double LAND_SPEED             = 0.3;
+  const double INITIAL_TAKEOFF_HEIGHT = 0.5;
 };
 
 /**

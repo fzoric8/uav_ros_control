@@ -127,7 +127,7 @@ bool uav_reference::CarrotReference::landServiceCb(std_srvs::SetBool::Request&  
   }
 
   if (_carrotLandEnabled) {
-    
+
     // Can't land in carrot if position hold is not enabled
     if (!_positionHold) {
       ROS_FATAL(
@@ -205,8 +205,18 @@ bool uav_reference::CarrotReference::takeoffServiceCb(
   }
 
   resetCarrot();
-  _positionHold             = true;
-  _takeoff_altitude_request = _uavPos[2] + request.rel_alt;
+  bool reset_success = resetIntegrators();
+  if (!reset_success) {
+    ROS_FATAL(
+      "CarrotReference::takeoffServiceCb - unable to takeoff, failed to reset controller "
+      "integrators.");
+    set_response(false);
+    return true;
+  }
+
+  _positionHold                            = true;
+  _takeoff_altitude_request                = _uavPos[2] + request.rel_alt;
+  _carrotPoint.transforms[0].translation.z = _uavPos[2] + INITIAL_TAKEOFF_HEIGHT;
   ROS_INFO("CarrotReference::takeoffServiceCb - enable position hold");
   _carrotTakeoffTimer.start();
 
@@ -231,16 +241,17 @@ void uav_reference::CarrotReference::positionRefCb(
   }
 }
 
-void uav_reference::CarrotReference::resetIntegrators()
+bool uav_reference::CarrotReference::resetIntegrators()
 {
   std_srvs::Empty::Request  req;
   std_srvs::Empty::Response resp;
   if (!_intResetClient.call(req, resp)) {
     ROS_FATAL("CarrotReference - Unable to reset integrators");
-    return;
+    return false;
   }
 
   ROS_INFO("Controller integrators reset.");
+  return true;
 }
 
 void uav_reference::CarrotReference::updateCarrot()
@@ -479,7 +490,7 @@ void uav_reference::CarrotReference::takeoff_loop(const ros::TimerEvent& e)
 
   ROS_INFO_THROTTLE(2.0, "CarrotReference::takeoff_loop");
 
-  _carrotPoint.transforms[0].translation.z += 0.3 * 0.02;
+  _carrotPoint.transforms[0].translation.z += TAKEOFF_SPEED * CARROT_DT;
 
   if (_carrotPoint.transforms[0].translation.z >= _takeoff_altitude_request) {
     ROS_INFO("CarrotReference::takeoff_loop - takeoff happened.");
@@ -499,7 +510,7 @@ void uav_reference::CarrotReference::land_loop(const ros::TimerEvent& e)
     return;
   }
 
-  _carrotPoint.transforms[0].translation.z -= 0.3 * 0.02;
+  _carrotPoint.transforms[0].translation.z -= LAND_SPEED * CARROT_DT;
 
   if (!m_handlerState.getData().armed) {
     ROS_INFO("CarrotReference::land_loop - land happened.");
@@ -513,7 +524,7 @@ void uav_reference::CarrotReference::land_loop(const ros::TimerEvent& e)
 void uav_reference::runDefault(uav_reference::CarrotReference& carrotRefObj,
                                ros::NodeHandle&                nh)
 {
-  double    rate = 50;
+  double    rate = 1 / CarrotReference::CARROT_DT;
   ros::Rate loopRate(rate);
 
   while (ros::ok()) {
