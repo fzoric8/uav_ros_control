@@ -7,7 +7,7 @@
     <arg name="carrot_enable"   default="1"/>
     <arg name="manual_takeoff"  default="true"/>
     <arg name="frame_id"        default="world"/>
-    <arg name="carrot_land"     default="true"/>
+    <arg name="carrot_land"     default="false"/>
 
     <group ns="$(arg namespace)">
         <!-- Load joy configuration file-->
