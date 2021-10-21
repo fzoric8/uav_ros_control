@@ -186,9 +186,9 @@ private:
   double     _land_altitude_request = 0.0;
   void       land_loop(const ros::TimerEvent& e);
 
-  const double TAKEOFF_SPEED          = 0.3;
+  const double TAKEOFF_SPEED          = 0.2;
   const double LAND_SPEED             = 0.3;
-  const double INITIAL_TAKEOFF_HEIGHT = 0.5;
+  const double INITIAL_TAKEOFF_HEIGHT = 0.3;
 };
 
 /**
