@@ -9,6 +9,7 @@
     <arg name="control_type"          default="pid_cascade_node"/>
     <arg name="default_params"        default="$(find uav_ros_control)/config/control/position_control.params.yaml"/>
     <arg name="carrot_frame_id"       default="world"/>
+    <arg name="carrot_land"           default="false"/>
 
     <include file="$(find uav_ros_control)/launch/carrot_reference.launch">
         <arg name="namespace"       value="$(arg namespace)"/>
@@ -16,6 +17,7 @@
         <arg name="odom"            value="$(arg odometry)"/>
         <arg name="manual_takeoff"  value="$(arg manual_takeoff)"/>
         <arg name="frame_id"        value="$(arg carrot_frame_id)"/>
+        <arg name="carrot_land"     value="$(arg carrot_land)"/>
     </include>
     
     <include file="$(find uav_ros_control)/launch/position_control.launch">

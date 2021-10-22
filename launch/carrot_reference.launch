@@ -7,6 +7,7 @@
     <arg name="carrot_enable"   default="1"/>
     <arg name="manual_takeoff"  default="true"/>
     <arg name="frame_id"        default="world"/>
+    <arg name="carrot_land"     default="false"/>
 
     <group ns="$(arg namespace)">
         <!-- Load joy configuration file-->
@@ -26,6 +27,7 @@
             <param name="carrot_enable"     value="$(arg carrot_enable)"/>
             <param name="manual_takeoff"    value="$(arg manual_takeoff)"/>
             <param name="frame_id"          value="$(arg frame_id)"/>
+            <param name="carrot_land"       value="$(arg carrot_land)"/>
 
             <!-- Topic remapping -->
             <remap from="carrot/trajectory" to="$(arg ref)"/>
