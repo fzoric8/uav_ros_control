@@ -1,5 +1,6 @@
 #include "ros/forwards.h"
 #include <uav_ros_lib/ros_convert.hpp>
+#include <uav_ros_lib/param_util.hpp>
 #include <uav_ros_control/reference/CarrotReference.hpp>
 #include <geometry_msgs/PoseStamped.h>
 #include <std_msgs/String.h>
@@ -55,11 +56,17 @@ uav_reference::CarrotReference::CarrotReference(ros::NodeHandle& nh)
   _carrotPoint.velocities    = std::vector<geometry_msgs::Twist>(1);
   _carrotPoint.accelerations = std::vector<geometry_msgs::Twist>(1);
 
-  _carrotTakeoffTimer = nh.createTimer(
-    ros::Rate(50), &uav_reference::CarrotReference::takeoff_loop, this, false, false);
+  _carrotTakeoffTimer = nh.createTimer(ros::Rate(1 / CARROT_DT),
+                                       &uav_reference::CarrotReference::takeoff_loop,
+                                       this,
+                                       false,
+                                       false);
 
-  _carrotLandTimer = nh.createTimer(
-    ros::Rate(50), &uav_reference::CarrotReference::land_loop, this, false, false);
+  _carrotLandTimer = nh.createTimer(ros::Rate(1 / CARROT_DT),
+                                    &uav_reference::CarrotReference::land_loop,
+                                    this,
+                                    false,
+                                    false);
 }
 
 uav_reference::CarrotReference::~CarrotReference() {}
@@ -217,7 +224,7 @@ bool uav_reference::CarrotReference::takeoffServiceCb(
 
   _positionHold                            = true;
   _takeoff_altitude_request                = _uavPos[2] + request.rel_alt;
-  _carrotPoint.transforms[0].translation.z = _uavPos[2] + INITIAL_TAKEOFF_HEIGHT;
+  _carrotPoint.transforms[0].translation.z = _uavPos[2] + _initialTakeoffHeight;
   ROS_INFO("CarrotReference::takeoffServiceCb - enable position hold");
   _carrotTakeoffTimer.start();
 
@@ -395,30 +402,14 @@ void uav_reference::CarrotReference::initializeParameters()
   ROS_WARN("CarrotReference::initializeParameters()");
 
   ros::NodeHandle nhPrivate("~");
-  bool            initialized = nhPrivate.getParam("carrot_index", _carrotEnabledIndex)
-                     && nhPrivate.getParam("carrot_enable", _carrotEnabledValue)
-                     && nhPrivate.getParam("manual_takeoff", _manualTakeoffEnabled)
-                     && nhPrivate.getParam("frame_id", _frameId)
-                     && nhPrivate.getParam("carrot_land", _carrotLandEnabled);
-
-  ROS_INFO("CarrotReference::initializeParameters() - carrot button enable index is %d",
-           _carrotEnabledIndex);
-  ROS_INFO("CarrotReference::initializeParameters() - carrot enable value is %d",
-           _carrotEnabledValue);
-
-  ROS_WARN_COND(_manualTakeoffEnabled,
-                "CarrotReference::initializeParameters() - manual takeoff enabled");
-  ROS_WARN_COND(!_manualTakeoffEnabled,
-                "CarrotReference::initializeParameters() - automatic takeoff enabled");
-  ROS_WARN_COND(_carrotLandEnabled,
-                "CarrotReference::initializeParameters() - carrot land enabled!");
-
-  if (!initialized) {
-    ROS_FATAL(
-      "CarrotReference::initializeParameters() -\
-			Carrot enable index not properly initialized.");
-    throw std::runtime_error("CarrotReference parameters not properly set.");
-  }
+  param_util::getParamOrThrow(nhPrivate, "carrot_index", _carrotEnabledIndex);
+  param_util::getParamOrThrow(nhPrivate, "carrot_enable", _carrotEnabledValue);
+  param_util::getParamOrThrow(nhPrivate, "carrot_land", _carrotLandEnabled);
+  param_util::getParamOrThrow(nhPrivate, "manual_takeoff", _manualTakeoffEnabled);
+  param_util::getParamOrThrow(nhPrivate, "carrot_frame_id", _frameId);
+  param_util::getParamOrThrow(nhPrivate, "land_speed", _landSpeed);
+  param_util::getParamOrThrow(nhPrivate, "initial_takeoff_height", _initialTakeoffHeight);
+  param_util::getParamOrThrow(nhPrivate, "takeoff_speed", _takeoffSpeed);
 }
 
 void uav_reference::CarrotReference::updateCarrotStatus()
@@ -491,7 +482,7 @@ void uav_reference::CarrotReference::takeoff_loop(const ros::TimerEvent& e)
 
   ROS_INFO_THROTTLE(2.0, "CarrotReference::takeoff_loop");
 
-  _carrotPoint.transforms[0].translation.z += TAKEOFF_SPEED * CARROT_DT;
+  _carrotPoint.transforms[0].translation.z += _takeoffSpeed * CARROT_DT;
 
   if (_carrotPoint.transforms[0].translation.z >= _takeoff_altitude_request) {
     ROS_INFO("CarrotReference::takeoff_loop - takeoff happened.");
@@ -512,7 +503,7 @@ void uav_reference::CarrotReference::land_loop(const ros::TimerEvent& e)
   }
 
   ROS_INFO_THROTTLE(2.0, "CarrotReference::land_loop");
-  _carrotPoint.transforms[0].translation.z -= LAND_SPEED * CARROT_DT;
+  _carrotPoint.transforms[0].translation.z -= _landSpeed * CARROT_DT;
 
   if (!m_handlerState.getData().armed) {
     ROS_INFO("CarrotReference::land_loop - land happened.");

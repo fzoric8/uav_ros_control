@@ -179,16 +179,15 @@ private:
 
   /* Define timers */
   ros::Timer _carrotTakeoffTimer;
+  double     _takeoffSpeed             = 0.2;
+  double     _initialTakeoffHeight     = 0.3;
   double     _takeoff_altitude_request = 2.0;
   void       takeoff_loop(const ros::TimerEvent& e);
 
   ros::Timer _carrotLandTimer;
+  double     _landSpeed             = 0.3;
   double     _land_altitude_request = 0.0;
   void       land_loop(const ros::TimerEvent& e);
-
-  const double TAKEOFF_SPEED          = 0.2;
-  const double LAND_SPEED             = 0.3;
-  const double INITIAL_TAKEOFF_HEIGHT = 0.3;
 };
 
 /**

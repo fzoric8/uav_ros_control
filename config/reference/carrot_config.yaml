@@ -1,0 +1,26 @@
+# Index of the /joy/button array which triggers Carrot Reference
+carrot_index: 5
+
+# Value at the /joy/button[carrot_index] which enables Carrot Reference
+carrot_enable: 1
+
+# Fame ID where the reference is published
+carrot_frame_id: "world"
+
+# If carrot land is false landing is done by asking Mavros to go to 'LAND' mode
+# Otherwise, land mode is done by lowering the Carrot Reference
+carrot_land: false
+
+# Speed at which the landing is performed (if carrot_land is true, 
+# otherwise land speed is dictated by the autopilot)
+land_speed: 0.3
+
+# If manual takeoff takeoff is enabled, the pilot should perform the takeoff
+# Otherwise /takeoff service should be called to takeoff the UAV
+manual_takeoff: true
+
+# Initial reference step before the takeoff ramp during automatic takeoff
+initial_takeoff_height: 0.3
+
+# Speed at which the takeoff is performed after the initial step
+takeoff_speed: 0.2
