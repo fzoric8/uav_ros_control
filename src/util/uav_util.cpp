@@ -58,7 +58,7 @@ bool uav_util::automatic_takeoff(ros::NodeHandle &nh,
     sensor_msgs::Joy enable_carrot_msg;
     enable_carrot_msg.buttons = std::vector<int>{ 0, 0, 0, 0, 0, 1 };
     joy_pub.publish(enable_carrot_msg);
-
+    
     wait.sleep();
   }
 

@@ -222,6 +222,7 @@ bool uav_reference::CarrotReference::takeoffServiceCb(
     return true;
   }
 
+  _carrotOnLand                            = false;
   _positionHold                            = true;
   _takeoff_altitude_request                = _uavPos[2] + request.rel_alt;
   _carrotPoint.transforms[0].translation.z = _uavPos[2] + _initialTakeoffHeight;
@@ -487,7 +488,6 @@ void uav_reference::CarrotReference::takeoff_loop(const ros::TimerEvent& e)
   if (_carrotPoint.transforms[0].translation.z >= _takeoff_altitude_request) {
     ROS_INFO("CarrotReference::takeoff_loop - takeoff happened.");
     _takeoffHappened = true;
-    _carrotOnLand    = false;
     _carrotTakeoffTimer.stop();
   }
 }
