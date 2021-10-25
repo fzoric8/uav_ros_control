@@ -23,14 +23,14 @@
             name="carrot_reference_node"
             output="screen">
 
-            <rosparam command="load" file="$(arg carrot_config)"/>
-
             <!-- Private parameters -->
             <param name="carrot_index"      value="$(arg carrot_index)" />
             <param name="carrot_enable"     value="$(arg carrot_enable)"/>
             <param name="manual_takeoff"    value="$(arg manual_takeoff)"/>
             <param name="carrot_frame_id"   value="$(arg carrot_frame_id)"/>
             <param name="carrot_land"       value="$(arg carrot_land)"/>
+
+            <rosparam command="load" file="$(arg carrot_config)"/>
 
             <!-- Topic remapping -->
             <remap from="carrot/trajectory" to="$(arg ref)"/>
