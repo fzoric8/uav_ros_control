@@ -61,6 +61,14 @@ add_dependencies(pid_cascade_node_yawrate ${catkin_EXPORTED_TARGETS}
                  ${PROJECT_NAME}_gencfg)
 
 add_executable(
+  pid_cascade_rotor_tilt
+  nodes/control/PositionControlNode_rotor_tilt.cpp src/control/CascadePID.cpp
+  src/control/ControlBase.cpp)
+target_link_libraries(pid_cascade_rotor_tilt uav_pid)
+add_dependencies(pid_cascade_rotor_tilt ${catkin_EXPORTED_TARGETS}
+                 ${PROJECT_NAME}_gencfg)
+
+add_executable(
   pid_cascade_node_px4 nodes/control/PositionControlNode_px4.cpp
                        src/control/CascadePID.cpp src/control/ControlBase.cpp)
 target_link_libraries(pid_cascade_node_px4 uav_pid)

@@ -173,6 +173,8 @@ void runDefault_px4(uav_controller::CascadePID &cascadeObj,
  */
 void runDefault_yawrate_px4(uav_controller::CascadePID &cascadeObj, ros::NodeHandle &nh);
 
+void runDefault_tilt_control(uav_controller::CascadePID &cascadeObj, ros::NodeHandle &nh);
+
 }// namespace uav_controller
 
 #endif /** CASCADE_PID_H */
