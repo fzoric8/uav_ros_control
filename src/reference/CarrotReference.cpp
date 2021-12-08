@@ -162,9 +162,6 @@ bool uav_reference::CarrotReference::landServiceCb(std_srvs::SetBool::Request&  
     return true;
   }
 
-  _positionHold    = false;
-  _carrotOnLand    = true;
-  _takeoffHappened = false;
   ROS_INFO("Carrotreference::landServiceCb - LAND finished");
   set_response(true);
   return true;
