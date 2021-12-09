@@ -179,6 +179,7 @@ private:
 
   /* Define timers */
   ros::Timer _carrotTakeoffTimer;
+  int        _landCounter              = 0;
   double     _takeoffSpeed             = 0.2;
   double     _initialTakeoffHeight     = 0.3;
   double     _takeoff_altitude_request = 2.0;
