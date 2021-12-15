@@ -362,6 +362,14 @@ void uav_controller::runDefault_yawrate(uav_controller::CascadePID &cascadeObj,
       cascadeObj.publishAttitudeTarget(MASK_IGNORE_RP_RATE, yawRateSetpoint);
     } else {
       ROS_FATAL_THROTTLE(2, "CascadePID::runDefault - controller inactive");
+
+      ROS_WARN_THROTTLE(2, "CascadePID::runDefault - publishing zero to thrust");
+      cascadeObj.overrideRollTarget(0);
+      cascadeObj.overridePitchTarget(0);
+      cascadeObj.overrideYawTarget(0);  
+      cascadeObj.setThrustSp(0); 
+      cascadeObj.publishAttitudeTarget(MASK_IGNORE_RP_RATE, 0); 
+    
     }
     cascadeObj.publishEulerSp();
     loopRate.sleep();
