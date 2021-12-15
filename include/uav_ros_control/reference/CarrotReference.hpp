@@ -156,6 +156,7 @@ private:
   bool _firstPass            = true;
   bool _manualTakeoffEnabled = true;
   bool _carrotLandEnabled    = true;
+  bool _landDisarmEnabled    = false;
   bool _carrotOnLand         = false;
   bool _takeoffHappened      = false;
 
@@ -175,7 +176,7 @@ private:
   ros::ServiceServer _servicePoisitionHold, _serviceTakeoff, _serviceLand;
 
   /* Reset integrator client */
-  ros::ServiceClient _intResetClient, _setModeToLandClient;
+  ros::ServiceClient _intResetClient, _setModeToLandClient, _forceDisarmClient;
 
   /* Define timers */
   ros::Timer _carrotTakeoffTimer;
