@@ -519,7 +519,7 @@ void uav_reference::CarrotReference::land_loop(const ros::TimerEvent& e)
   }
   _lastAltDifference = curr_difference;
 
-  if (!m_handlerState.getData().armed || _landCounter > 100)  {
+  if (!m_handlerState.getData().armed || _landCounter > 50)  {
     ROS_INFO("CarrotReference::land_loop - land happened.");
     _takeoffHappened = false;
     _carrotOnLand    = true;
