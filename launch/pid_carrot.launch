@@ -10,6 +10,8 @@
     <arg name="default_params"        default="$(find uav_ros_control)/config/control/position_control.params.yaml"/>
     <arg name="carrot_frame_id"       default="world"/>
     <arg name="carrot_land"           default="false"/>
+    <arg name="land_disarm_enabled"   default="false"/>
+    <arg name="carrot_config"         default="$(find uav_ros_control)/config/reference/carrot_config.yaml" />
 
     <include file="$(find uav_ros_control)/launch/carrot_reference.launch">
         <arg name="namespace"       value="$(arg namespace)"/>
@@ -18,6 +20,8 @@
         <arg name="manual_takeoff"  value="$(arg manual_takeoff)"/>
         <arg name="carrot_frame_id" value="$(arg carrot_frame_id)"/>
         <arg name="carrot_land"     value="$(arg carrot_land)"/>
+        <arg name="land_disarm_enabled" value="$(arg land_disarm_enabled)"/>
+        <arg name="carrot_config"   value="$(arg carrot_config)"/>
     </include>
     
     <include file="$(find uav_ros_control)/launch/position_control.launch">

@@ -10,6 +10,8 @@
     <arg name="carrot_land"     default="false"/>
     <arg name="carrot_config"   default="$(find uav_ros_control)/config/reference/carrot_config.yaml"/>
 
+    <arg name="land_disarm_enabled" default="false"/>
+
     <group ns="$(arg namespace)">
         <!-- Load joy configuration file-->
         <rosparam 
@@ -29,6 +31,7 @@
             <param name="manual_takeoff"    value="$(arg manual_takeoff)"/>
             <param name="carrot_frame_id"   value="$(arg carrot_frame_id)"/>
             <param name="carrot_land"       value="$(arg carrot_land)"/>
+            <param name="land_disarm_enabled" value="$(arg land_disarm_enabled)"/>
 
             <rosparam command="load" file="$(arg carrot_config)"/>
 
