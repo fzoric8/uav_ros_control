@@ -427,6 +427,7 @@ void uav_controller::runDefault_tilt_control(uav_controller::CascadePID& cascade
 
       // Roll and Pitch setpoints are forwarded as attitude command
       auto rpy_ref = cascadeObj.getReferentRPY();
+      ROS_INFO_STREAM_THROTTLE(2.0, rpy_ref[0] << ", " << rpy_ref[1]);
       cascadeObj.overrideRollTarget(rpy_ref[0]);
       cascadeObj.overridePitchTarget(rpy_ref[1]);
 
