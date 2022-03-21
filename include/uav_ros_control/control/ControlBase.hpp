@@ -56,6 +56,13 @@ public:
   void setThrustSp(double thrust);
 
   /**
+   * @brief Get the Attitude thrust setpoint;
+   * 
+   * @return const std::array<double, 4>& 
+   */
+  const std::array<double, 4>& getAttThrustSp() { return _attThrustSp; }
+  
+  /**
    * Returns constant reference to the current position.
    */
   const std::array<double, 3> &getCurrPosition();
@@ -64,6 +71,13 @@ public:
    * Returns constant reference to the current velocity.
    */
   const std::array<double, 3> &getCurrVelocity();
+
+  /**
+   * @brief Get the Referent R P Y angles.
+   * 
+   * @return std::array<double, 3>& 
+   */
+  std::array<double, 3> getReferentRPY();
 
   /**
    * Return current UAV yaw angle.

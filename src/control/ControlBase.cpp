@@ -14,6 +14,7 @@
 #include <geometry_msgs/Quaternion.h>
 #include <geometry_msgs/Twist.h>
 #include <tf2/LinearMath/Quaternion.h>
+#include <tf2/LinearMath/Matrix3x3.h>
 
 // Cpp includes
 #include <iostream>
@@ -21,12 +22,12 @@
 #include <array>
 #include <cmath>
 
-uav_controller::ControlBase::ControlBase(ros::NodeHandle &nh)
+uav_controller::ControlBase::ControlBase(ros::NodeHandle& nh)
 {
   ros::NodeHandle nhPrivate("~");
-  bool msf_callback = false;
-  bool local_callback = false;
-  bool initialized = nhPrivate.getParam("msf_callback", msf_callback)
+  bool            msf_callback   = false;
+  bool            local_callback = false;
+  bool            initialized    = nhPrivate.getParam("msf_callback", msf_callback)
                      && nhPrivate.getParam("local_callback", local_callback);
   if (!initialized) {
     ROS_FATAL("ControlBase - parameters not loaded.");
@@ -44,7 +45,7 @@ uav_controller::ControlBase::ControlBase(ros::NodeHandle &nh)
   }
 
   // Initialize all subscribers
-  _subOdom = nh.subscribe("odometry", 1, odomCallback, this);
+  _subOdom      = nh.subscribe("odometry", 1, odomCallback, this);
   _subReference = nh.subscribe(
     "uav/trajectory_point", 1, &uav_controller::ControlBase::trajPointCb, this);
 
@@ -54,12 +55,12 @@ uav_controller::ControlBase::ControlBase(ros::NodeHandle &nh)
   _pubEulerSetpoint = nh.advertise<geometry_msgs::Vector3>("uav/euler_setpoint", 1);
 
   // Initialize references
-  _currentReference.transforms = std::vector<geometry_msgs::Transform>(1);
-  _currentReference.velocities = std::vector<geometry_msgs::Twist>(1);
+  _currentReference.transforms    = std::vector<geometry_msgs::Transform>(1);
+  _currentReference.velocities    = std::vector<geometry_msgs::Twist>(1);
   _currentReference.accelerations = std::vector<geometry_msgs::Twist>(1);
 }
 
-void uav_controller::ControlBase::odomCb(const nav_msgs::OdometryConstPtr &message)
+void uav_controller::ControlBase::odomCb(const nav_msgs::OdometryConstPtr& message)
 {
   _currentPosition[0] = message->pose.pose.position.x;
   _currentPosition[1] = message->pose.pose.position.y;
@@ -70,12 +71,12 @@ void uav_controller::ControlBase::odomCb(const nav_msgs::OdometryConstPtr &messa
   _currentVelocity[2] = -message->twist.twist.linear.z;
 
   _currentYaw = ros_convert::calculateYaw(message->pose.pose.orientation.x,
-    message->pose.pose.orientation.y,
-    message->pose.pose.orientation.z,
-    message->pose.pose.orientation.w);
+                                          message->pose.pose.orientation.y,
+                                          message->pose.pose.orientation.z,
+                                          message->pose.pose.orientation.w);
 }
 
-void uav_controller::ControlBase::localOdomCb(const nav_msgs::OdometryConstPtr &message)
+void uav_controller::ControlBase::localOdomCb(const nav_msgs::OdometryConstPtr& message)
 {
   _currentPosition[0] = message->pose.pose.position.x;
   _currentPosition[1] = message->pose.pose.position.y;
@@ -86,12 +87,12 @@ void uav_controller::ControlBase::localOdomCb(const nav_msgs::OdometryConstPtr &
   _currentVelocity[2] = message->twist.twist.linear.z;
 
   _currentYaw = ros_convert::calculateYaw(message->pose.pose.orientation.x,
-    message->pose.pose.orientation.y,
-    message->pose.pose.orientation.z,
-    message->pose.pose.orientation.w);
+                                          message->pose.pose.orientation.y,
+                                          message->pose.pose.orientation.z,
+                                          message->pose.pose.orientation.w);
 }
 
-void uav_controller::ControlBase::msfOdomCb(const nav_msgs::OdometryConstPtr &message)
+void uav_controller::ControlBase::msfOdomCb(const nav_msgs::OdometryConstPtr& message)
 {
   _currentPosition[0] = message->pose.pose.position.x;
   _currentPosition[1] = message->pose.pose.position.y;
@@ -104,30 +105,41 @@ void uav_controller::ControlBase::msfOdomCb(const nav_msgs::OdometryConstPtr &me
   _currentVelocity[2] = message->twist.twist.linear.z;
 
   _currentYaw = ros_convert::calculateYaw(message->pose.pose.orientation.x,
-    message->pose.pose.orientation.y,
-    message->pose.pose.orientation.z,
-    message->pose.pose.orientation.w);
+                                          message->pose.pose.orientation.y,
+                                          message->pose.pose.orientation.z,
+                                          message->pose.pose.orientation.w);
 }
 
 void uav_controller::ControlBase::trajPointCb(
-  const trajectory_msgs::MultiDOFJointTrajectoryPointConstPtr &msg)
+  const trajectory_msgs::MultiDOFJointTrajectoryPointConstPtr& msg)
 {
   if (msg->transforms.empty() || msg->velocities.empty() || msg->accelerations.empty()) {
     ROS_FATAL("ControlBase::trajPointCb - Trajectory point incomplete.");
     return;
   }
 
-  _currentReference.transforms[0] = msg->transforms[0];
-  _currentReference.velocities[0] = msg->velocities[0];
+  _currentReference.transforms[0]    = msg->transforms[0];
+  _currentReference.velocities[0]    = msg->velocities[0];
   _currentReference.accelerations[0] = msg->accelerations[0];
 }
 
-const std::array<double, 3> &uav_controller::ControlBase::getCurrPosition()
+std::array<double, 3> uav_controller::ControlBase::getReferentRPY()
+{
+  tf2::Matrix3x3        m(tf2::Quaternion(_currentReference.transforms[0].rotation.x,
+                                   _currentReference.transforms[0].rotation.y,
+                                   _currentReference.transforms[0].rotation.z,
+                                   _currentReference.transforms[0].rotation.w));
+  std::array<double, 3> rpy = { 0, 0, 0 };
+  m.getRPY(rpy[0], rpy[1], rpy[2]);
+  return rpy;
+}
+
+const std::array<double, 3>& uav_controller::ControlBase::getCurrPosition()
 {
   return _currentPosition;
 }
 
-const std::array<double, 3> &uav_controller::ControlBase::getCurrVelocity()
+const std::array<double, 3>& uav_controller::ControlBase::getCurrVelocity()
 {
   return _currentVelocity;
 }
@@ -136,16 +148,16 @@ void uav_controller::ControlBase::publishAttitudeTarget(int typeMask, double yaw
 {
   tf2::Quaternion q;
   q.setRPY(_attThrustSp[0], _attThrustSp[1], _attThrustSp[2]);
-  
+
   mavros_msgs::AttitudeTarget newMessage;
-  newMessage.header.stamp = ros::Time::now();
-  newMessage.type_mask = typeMask;
-  newMessage.body_rate.z = yawRate;
+  newMessage.header.stamp  = ros::Time::now();
+  newMessage.type_mask     = typeMask;
+  newMessage.body_rate.z   = yawRate;
   newMessage.orientation.x = q.getX();
   newMessage.orientation.y = q.getY();
   newMessage.orientation.z = q.getZ();
   newMessage.orientation.w = q.getW();
-  newMessage.thrust = _attThrustSp[3];
+  newMessage.thrust        = _attThrustSp[3];
   _pubAttitudeSetpoint.publish(newMessage);
 }
 
@@ -155,8 +167,8 @@ void uav_controller::ControlBase::setThrustSp(const double thrust)
 }
 
 void uav_controller::ControlBase::setAttitudeSp(const double roll,
-  const double pitch,
-  const double yaw)
+                                                const double pitch,
+                                                const double yaw)
 {
   _attThrustSp[0] = roll;
   _attThrustSp[1] = pitch;
@@ -187,7 +199,7 @@ void uav_controller::ControlBase::publishEulerSp()
   _pubEulerSetpoint.publish(newMessage);
 }
 
-const trajectory_msgs::MultiDOFJointTrajectoryPoint &
+const trajectory_msgs::MultiDOFJointTrajectoryPoint&
   uav_controller::ControlBase::getCurrentReference()
 {
   return _currentReference;

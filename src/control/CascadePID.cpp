@@ -1,6 +1,7 @@
 #include <uav_ros_control/control/CascadePID.hpp>
 #include <geometry_msgs/Vector3.h>
 #include <tf2/LinearMath/Matrix3x3.h>
+#include <mavros_msgs/OverrideRCIn.h>
 
 #define CARROT_OFF "OFF"
 #define CARROT_ON_LAND "CARROT_ON_LAND"
@@ -27,7 +28,7 @@
 #define HOVER_PARAM "control/hover"
 #define GRAVITY_ACCELERATION 9.8;
 
-uav_controller::CascadePID::CascadePID(ros::NodeHandle &nh)
+uav_controller::CascadePID::CascadePID(ros::NodeHandle& nh)
   : _posXPID{ new PID("Position - x") }, _posYPID{ new PID("Position - y") },
     _posZPID{ new PID("Position - z") }, _velXPID{ new PID("Velocity - x") },
     _velYPID{ new PID("Velocity - y") }, _velZPID{ new PID("Velocity - z") },
@@ -35,7 +36,7 @@ uav_controller::CascadePID::CascadePID(ros::NodeHandle &nh)
 {
   // Initialize class parameters
   initializeParameters(nh);
-  _velRefPub = nh.advertise<geometry_msgs::Vector3>("carrot/velocity", 1);
+  _velRefPub  = nh.advertise<geometry_msgs::Vector3>("carrot/velocity", 1);
   _velCurrPub = nh.advertise<geometry_msgs::Vector3>("uav/velocity", 1);
   _yawRefSub = nh.subscribe("carrot/yaw", 1, &uav_controller::CascadePID::yawRefCb, this);
   _carrotStateSub =
@@ -54,8 +55,8 @@ uav_controller::CascadePID::CascadePID(ros::NodeHandle &nh)
     "reset_integrator", &uav_controller::CascadePID::intResetServiceCb, this);
 }
 
-bool uav_controller::CascadePID::intResetServiceCb(std_srvs::Empty::Request &request,
-  std_srvs::Empty::Response &response)
+bool uav_controller::CascadePID::intResetServiceCb(std_srvs::Empty::Request&  request,
+                                                   std_srvs::Empty::Response& response)
 {
   ROS_WARN("Resetting all PID controllers");
   resetPositionPID();
@@ -69,19 +70,19 @@ bool uav_controller::CascadePID::activationPermission()
   return _carrotStatus == CARROT_ON_AIR || _carrotStatus == POS_HOLD;
 }
 
-void uav_controller::CascadePID::carrotStatusCb(const std_msgs::StringConstPtr &msg)
+void uav_controller::CascadePID::carrotStatusCb(const std_msgs::StringConstPtr& msg)
 {
   _carrotStatus = msg->data;
 }
 
-void uav_controller::CascadePID::yawRefCb(const std_msgs::Float64ConstPtr &msg)
+void uav_controller::CascadePID::yawRefCb(const std_msgs::Float64ConstPtr& msg)
 {
   _yawRef = msg->data;
 }
 
 void uav_controller::CascadePID::positionParamsCb(
-  uav_ros_control::PositionControlParametersConfig &configMsg,
-  uint32_t level)
+  uav_ros_control::PositionControlParametersConfig& configMsg,
+  uint32_t                                          level)
 {
   ROS_WARN("CascadePID::parametersCallback");
 
@@ -139,38 +140,38 @@ void uav_controller::CascadePID::positionParamsCb(
 }
 
 void uav_controller::CascadePID::setPositionReconfigureParams(
-  uav_ros_control::PositionControlParametersConfig &config)
+  uav_ros_control::PositionControlParametersConfig& config)
 {
   ROS_WARN("CascadePID::setReconfigureParameters");
 
-  config.yaw_rate_p = _yawRatePID->get_kp();
-  config.yaw_rate_i = _yawRatePID->get_ki();
-  config.yaw_rate_d = _yawRatePID->get_kd();
+  config.yaw_rate_p        = _yawRatePID->get_kp();
+  config.yaw_rate_i        = _yawRatePID->get_ki();
+  config.yaw_rate_d        = _yawRatePID->get_kd();
   config.yaw_rate_lim_high = _yawRatePID->get_lim_high();
-  config.yaw_rate_lim_low = _yawRatePID->get_lim_low();
+  config.yaw_rate_lim_low  = _yawRatePID->get_lim_low();
 
-  config.k_p_xy = _posYPID->get_kp();
-  config.k_i_xy = _posYPID->get_ki();
-  config.k_d_xy = _posYPID->get_kd();
-  config.lim_low_xy = _posYPID->get_lim_low();
+  config.k_p_xy      = _posYPID->get_kp();
+  config.k_i_xy      = _posYPID->get_ki();
+  config.k_d_xy      = _posYPID->get_kd();
+  config.lim_low_xy  = _posYPID->get_lim_low();
   config.lim_high_xy = _posYPID->get_lim_high();
 
-  config.k_p_vxy = _velYPID->get_kp();
-  config.k_i_vxy = _velYPID->get_ki();
-  config.k_d_vxy = _velYPID->get_kd();
-  config.lim_low_vxy = _velYPID->get_lim_low();
+  config.k_p_vxy      = _velYPID->get_kp();
+  config.k_i_vxy      = _velYPID->get_ki();
+  config.k_d_vxy      = _velYPID->get_kd();
+  config.lim_low_vxy  = _velYPID->get_lim_low();
   config.lim_high_vxy = _velYPID->get_lim_high();
 
-  config.k_p_z = _posZPID->get_kp();
-  config.k_i_z = _posZPID->get_ki();
-  config.k_d_z = _posZPID->get_kd();
-  config.lim_low_z = _posZPID->get_lim_low();
+  config.k_p_z      = _posZPID->get_kp();
+  config.k_i_z      = _posZPID->get_ki();
+  config.k_d_z      = _posZPID->get_kd();
+  config.lim_low_z  = _posZPID->get_lim_low();
   config.lim_high_z = _posZPID->get_lim_high();
 
-  config.k_p_vz = _velZPID->get_kp();
-  config.k_i_vz = _velZPID->get_ki();
-  config.k_d_vz = _velZPID->get_kd();
-  config.lim_low_vz = _velZPID->get_lim_low();
+  config.k_p_vz      = _velZPID->get_kp();
+  config.k_i_vz      = _velZPID->get_ki();
+  config.k_d_vz      = _velZPID->get_kd();
+  config.lim_low_vz  = _velZPID->get_lim_low();
   config.lim_high_vz = _velZPID->get_lim_high();
 
   config.ff_vel_x = _ffGainVelocityX;
@@ -183,7 +184,7 @@ void uav_controller::CascadePID::setPositionReconfigureParams(
   config.hover = _hoverThrust;
 }
 
-void uav_controller::CascadePID::initializeParameters(ros::NodeHandle &nh)
+void uav_controller::CascadePID::initializeParameters(ros::NodeHandle& nh)
 {
   ROS_WARN("CascadePID::initializeParameters()");
 
@@ -205,13 +206,13 @@ void uav_controller::CascadePID::initializeParameters(ros::NodeHandle &nh)
 
   ROS_INFO("Hover thrust: %.2f", _hoverThrust);
   ROS_INFO("Feed-forward velocity gain: [%.2f, %.2f, %.2f]",
-    _ffGainVelocityX,
-    _ffGainVelocityY,
-    _ffGainVelocityZ);
+           _ffGainVelocityX,
+           _ffGainVelocityY,
+           _ffGainVelocityZ);
   ROS_INFO("Feed-forward acceleration gain: [%.2f, %.2f, %.2f]",
-    _ffGainAccelerationX,
-    _ffGainAccelerationY,
-    _ffGainAccelerationZ);
+           _ffGainAccelerationX,
+           _ffGainAccelerationY,
+           _ffGainAccelerationZ);
   if (!initialized) {
     ROS_FATAL("CascadePID::initalizeParameters() - failed to initialize parameters");
     throw std::runtime_error("CascadedPID parameters not properly initialized.");
@@ -248,8 +249,8 @@ void uav_controller::CascadePID::calculateAttThrustSp(double dt, bool yaw_rate_c
   velocityRefZ += _ffGainVelocityZ * getCurrentReference().velocities[0].linear.z;
 
   // Calculate second row of PID controllers
-  double roll = -_velYPID->compute(velocityRefY, getCurrVelocity()[1], dt);
-  double pitch = _velXPID->compute(velocityRefX, getCurrVelocity()[0], dt);
+  double roll   = -_velYPID->compute(velocityRefY, getCurrVelocity()[1], dt);
+  double pitch  = _velXPID->compute(velocityRefX, getCurrVelocity()[0], dt);
   double thrust = _velZPID->compute(velocityRefZ, getCurrVelocity()[2], dt);
   thrust += _hoverThrust;
 
@@ -267,8 +268,8 @@ void uav_controller::CascadePID::calculateAttThrustSp(double dt, bool yaw_rate_c
   } else {
     // Decouple roll and pitch w.r.t. yaw - publish it in UAV body frame
     setAttitudeSp(cos(getCurrentYaw()) * roll + sin(getCurrentYaw()) * pitch,
-      cos(getCurrentYaw()) * pitch - sin(getCurrentYaw()) * roll,
-      _yawRef);
+                  cos(getCurrentYaw()) * pitch - sin(getCurrentYaw()) * roll,
+                  _yawRef);
   }
 
   setThrustSp(thrust);
@@ -290,9 +291,9 @@ double uav_controller::CascadePID::getYawRef() { return _yawRef; }
 
 double uav_controller::CascadePID::calculateYawRateSetpoint(double dt)
 {
-  auto yawRef = _yawRef;
-  auto yawMv = getCurrentYaw();
-  static constexpr auto tol = M_PI;
+  auto                  yawRef = _yawRef;
+  auto                  yawMv  = getCurrentYaw();
+  static constexpr auto tol    = M_PI;
 
   // Compensate for wrapping to [-PI, PI]
   if (yawRef - yawMv > tol) {
@@ -303,11 +304,11 @@ double uav_controller::CascadePID::calculateYawRateSetpoint(double dt)
   return _yawRatePID->compute(yawRef, getCurrentYaw(), dt);
 }
 
-void uav_controller::runDefault(uav_controller::CascadePID &cascadeObj,
-  ros::NodeHandle &nh)
+void uav_controller::runDefault(uav_controller::CascadePID& cascadeObj,
+                                ros::NodeHandle&            nh)
 {
-  double rate = 50;
-  double dt = 1.0 / rate;
+  double    rate = 50;
+  double    dt   = 1.0 / rate;
   ros::Rate loopRate(rate);
   ROS_WARN_ONCE(
     "[uav_controller::runDefault]: Control node for Ardupilot firmware is active!");
@@ -325,11 +326,11 @@ void uav_controller::runDefault(uav_controller::CascadePID &cascadeObj,
   }
 }
 
-void uav_controller::runDefault_px4(uav_controller::CascadePID &cascadeObj,
-  ros::NodeHandle &nh)
+void uav_controller::runDefault_px4(uav_controller::CascadePID& cascadeObj,
+                                    ros::NodeHandle&            nh)
 {
-  double rate = 50;
-  double dt = 1.0 / rate;
+  double    rate = 50;
+  double    dt   = 1.0 / rate;
   ros::Rate loopRate(rate);
   ROS_WARN_ONCE(
     "[uav_controller::runDefault_px4]: Control node for PX4 firmware is active!");
@@ -343,11 +344,11 @@ void uav_controller::runDefault_px4(uav_controller::CascadePID &cascadeObj,
   }
 }
 
-void uav_controller::runDefault_yawrate(uav_controller::CascadePID &cascadeObj,
-  ros::NodeHandle &nh)
+void uav_controller::runDefault_yawrate(uav_controller::CascadePID& cascadeObj,
+                                        ros::NodeHandle&            nh)
 {
-  double rate = 50;
-  double dt = 1.0 / rate;
+  double    rate = 50;
+  double    dt   = 1.0 / rate;
   ros::Rate loopRate(rate);
   ROS_WARN_ONCE(
     "[uav_controller::runDefault_yawrate]: Control node for Ardupilot firmware is "
@@ -376,13 +377,13 @@ void uav_controller::runDefault_yawrate(uav_controller::CascadePID &cascadeObj,
   }
 }
 
-void uav_controller::runDefault_yawrate_px4(uav_controller::CascadePID &cascadeObj,
-  ros::NodeHandle &nh)
+void uav_controller::runDefault_yawrate_px4(uav_controller::CascadePID& cascadeObj,
+                                            ros::NodeHandle&            nh)
 {
-  double rate = 50;
-  double dt = 1.0 / rate;
+  double    rate = 50;
+  double    dt   = 1.0 / rate;
   ros::Rate loopRate(rate);
-  bool yaw_rate_control_enabled = true;
+  bool      yaw_rate_control_enabled = true;
   ROS_WARN_ONCE(
     "[uav_controller::runDefault_yawrate_px4]: Control node for PX4 firmware is active!");
 
@@ -391,6 +392,70 @@ void uav_controller::runDefault_yawrate_px4(uav_controller::CascadePID &cascadeO
     cascadeObj.calculateAttThrustSp(dt, yaw_rate_control_enabled);
     const auto yawRateSetpoint = cascadeObj.calculateYawRateSetpoint(dt);
     cascadeObj.publishAttitudeTarget(MASK_IGNORE_RP_RATE, yawRateSetpoint);
+    cascadeObj.publishEulerSp();
+    loopRate.sleep();
+  }
+}
+
+void uav_controller::runDefault_tilt_control(uav_controller::CascadePID& cascadeObj,
+                                             ros::NodeHandle&            nh)
+{
+  constexpr double rate = 50;
+  double           dt   = 1.0 / rate;
+  ros::Rate        loopRate(rate);
+
+  int  default_pwm, roll_tilt_channel, pitch_tilt_channel;
+  bool initialized = nh.getParam("control/roll_tilt_channel", roll_tilt_channel)
+                     && nh.getParam("control/pitch_tilt_channel", pitch_tilt_channel)
+                     && nh.getParam("control/default_pwm", default_pwm);
+
+  if (!initialized) {
+    ROS_FATAL(
+      "[uav_controller::runDefault_tilt_control] Parameter initialization failed.");
+    throw std::runtime_error("Parameter initialization failed.");
+  }
+
+  ros::Publisher overridePub =
+    nh.advertise<mavros_msgs::OverrideRCIn>("mavros/rc/override", 1);
+  std::vector<int> override_indices = { 0, 0, 0, 0, 0, 0, 0, 0 };
+
+  ROS_WARN_ONCE(
+    "[uav_controller::runDefault_tilt_control] Control node for Ardupilot firmware is "
+    "active!");
+
+  while (ros::ok()) {
+    ros::spinOnce();
+    if (cascadeObj.activationPermission()) {
+      cascadeObj.calculateAttThrustSp(dt);
+
+      // Set tilt PWM values acoording to the calculated roll and pitch setpoint
+      const auto& att_thrust_sp            = cascadeObj.getAttThrustSp();
+      override_indices[roll_tilt_channel]  = default_pwm + att_thrust_sp[0];
+      override_indices[pitch_tilt_channel] = default_pwm + att_thrust_sp[1];
+
+      // Roll and Pitch setpoints are forwarded as attitude command
+      auto rpy_ref = cascadeObj.getReferentRPY();
+      ROS_INFO_STREAM_THROTTLE(2.0, rpy_ref[0] << ", " << rpy_ref[1]);
+      cascadeObj.overrideRollTarget(rpy_ref[0]);
+      cascadeObj.overridePitchTarget(rpy_ref[1]);
+
+      // Do yaw rate control
+      cascadeObj.overrideYawTarget(0);
+      const auto yawRateSetpoint = cascadeObj.calculateYawRateSetpoint(dt);
+
+      cascadeObj.publishAttitudeTarget(MASK_IGNORE_RP_RATE, yawRateSetpoint);
+    } else {
+
+      // Turn off Tilt override
+      override_indices = { 0, 0, 0, 0, 0, 0, 0, 0 };
+      ROS_FATAL_THROTTLE(2, "CascadePID::runDefault_tilt_control - controller inactive");
+    }
+
+    // Publish
+    mavros_msgs::OverrideRCIn newMsg;
+    std::copy(override_indices.begin(), override_indices.end(), newMsg.channels.elems);
+    overridePub.publish(newMsg);
+
     cascadeObj.publishEulerSp();
     loopRate.sleep();
   }
