@@ -404,10 +404,11 @@ void uav_controller::runDefault_tilt_control(uav_controller::CascadePID& cascade
   double           dt   = 1.0 / rate;
   ros::Rate        loopRate(rate);
 
-  int  default_pwm, roll_tilt_channel, pitch_tilt_channel;
+  int  default_pwm_roll, default_pwm_tilt, roll_tilt_channel, pitch_tilt_channel;
   bool initialized = nh.getParam("control/roll_tilt_channel", roll_tilt_channel)
                      && nh.getParam("control/pitch_tilt_channel", pitch_tilt_channel)
-                     && nh.getParam("control/default_pwm", default_pwm);
+                     && nh.getParam("control/default_pwm_roll", default_pwm_roll)
+                     && nh.getParam("control/default_pwm_tilt", default_pwm_tilt);
 
   if (!initialized) {
     ROS_FATAL(
@@ -430,8 +431,8 @@ void uav_controller::runDefault_tilt_control(uav_controller::CascadePID& cascade
 
       // Set tilt PWM values acoording to the calculated roll and pitch setpoint
       const auto& att_thrust_sp            = cascadeObj.getAttThrustSp();
-      override_indices[roll_tilt_channel]  = default_pwm + att_thrust_sp[0];
-      override_indices[pitch_tilt_channel] = default_pwm + att_thrust_sp[1];
+      override_indices[roll_tilt_channel]  = default_pwm_roll + att_thrust_sp[0];
+      override_indices[pitch_tilt_channel] = default_pwm_tilt + att_thrust_sp[1];
 
       // Roll and Pitch setpoints are forwarded as attitude command
       auto rpy_ref = cascadeObj.getReferentRPY();

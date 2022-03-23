@@ -5,7 +5,8 @@ control:
   
   pitch_tilt_channel: 1
   roll_tilt_channel: 2
-  default_pwm: 1500
+  default_pwm_roll: 1500
+  default_pwm_tilt: 1500
 
   ff_gain:
     velocity:
