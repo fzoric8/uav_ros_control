@@ -431,7 +431,7 @@ void uav_controller::runDefault_tilt_control(uav_controller::CascadePID& cascade
 
       // Set tilt PWM values acoording to the calculated roll and pitch setpoint
       const auto& att_thrust_sp            = cascadeObj.getAttThrustSp();
-      override_indices[roll_tilt_channel]  = default_pwm_roll + att_thrust_sp[0];
+      override_indices[roll_tilt_channel]  = default_pwm_roll - att_thrust_sp[0];
       override_indices[pitch_tilt_channel] = default_pwm_pitch + att_thrust_sp[1];
 
       // Roll and Pitch setpoints are forwarded as attitude command
