@@ -1,0 +1,36 @@
+<launch>
+  <arg name="load_manager"      default="true"/>
+  <arg name="debug"             default="false" />
+  <arg name="namespace"         default="$(env UAV_NAMESPACE)"/>
+
+    <!-- Determine if launching in stanadalone or manager mode-->
+  <arg name="standalone"            default="false" />
+  <arg name="manager"               default="nodelet_manager"/>
+  <arg     if="$(arg standalone)"   name="nodelet"          value="standalone" />
+  <arg unless="$(arg standalone)"   name="nodelet"          value="load" />
+  <arg     if="$(arg standalone)"   name="nodelet_manager"  value="" />
+  <arg unless="$(arg standalone)"   name="nodelet_manager"  value="$(arg manager)" />
+
+  <arg     if="$(arg debug)" name="launch_prefix" value="debug_roslaunch" />
+  <arg unless="$(arg debug)" name="launch_prefix" value="" />
+
+  <!-- Launch manager -->
+  <include file="$(find uav_ros_general)/launch/nodelet_manager.launch">
+    <arg name="load_manager"  value="$(arg load_manager)"/>
+    <arg name="debug"         value="$(arg debug)"/>
+    <arg name="n_threads"     value="16"/>
+    <arg name="manager_name"  value="$(arg manager)"/>
+  </include>
+
+  <!-- Load UAVControlManager nodelet -->
+  <node 
+    pkg="nodelet" type="nodelet" name="uav_manager" 
+    args="$(arg nodelet) uav_ros_control/UAVManager $(arg nodelet_manager)" 
+    output="screen" ns="$(arg namespace)" launch-prefix="$(arg launch_prefix)">
+
+    <!-- Load private parameters -->
+
+    <!-- Topic remapping -->
+  </node>
+
+</launch>

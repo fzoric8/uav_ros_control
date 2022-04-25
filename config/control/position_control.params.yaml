@@ -42,9 +42,9 @@ control:
     lim_high: 0.4 
 
   pos_z:
-    kp: 3
+    kp: 1.5
     ki: 0.1
-    kd: 1.25
+    kd: 0
     lim_low: -15.0
     lim_high: 15.0
 

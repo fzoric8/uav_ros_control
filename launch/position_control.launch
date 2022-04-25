@@ -13,7 +13,7 @@
 
         <!-- Carrot-Mode reference generator node -->
         <node pkg="uav_ros_control" type="$(arg control_type)"
-            name="pid_cascade_node" output="screen">
+            name="pid_cascade_node" output="screen" launch-prefix="">
 
             <param name="msf_callback" value="$(arg msf_callback_enable)"/>
             <param name="local_callback" value="$(arg local_callback_enable)"/>
