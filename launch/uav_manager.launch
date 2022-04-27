@@ -2,6 +2,7 @@
   <arg name="load_manager"      default="true"/>
   <arg name="debug"             default="false" />
   <arg name="namespace"         default="$(env UAV_NAMESPACE)"/>
+  <arg name="odometry"          default="mavros/local_position/odom"/>
 
     <!-- Determine if launching in stanadalone or manager mode-->
   <arg name="standalone"            default="false" />
@@ -31,6 +32,7 @@
     <!-- Load private parameters -->
 
     <!-- Topic remapping -->
+    <remap from="odometry" to="$(arg odometry)"/>
   </node>
 
 </launch>
