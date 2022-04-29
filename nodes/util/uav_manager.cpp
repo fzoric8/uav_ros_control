@@ -33,6 +33,7 @@ void uav_ros_control::UAVManager::onInit()
   m_takeoff_client = nh.serviceClient<uav_ros_msgs::TakeOff>("takeoff");
   m_land_client    = nh.serviceClient<std_srvs::SetBool>("land");
   m_tracker_reset_client = nh.serviceClient<std_srvs::Empty>("tracker/reset");
+  m_clear_mission        = nh.serviceClient<std_srvs::SetBool>("clear_waypoints");
 
   // Initialize servers
   m_armtakeoff_server =
@@ -113,13 +114,16 @@ bool uav_ros_control::UAVManager::arm_and_takeoff_cb(
   }
 
   // Set the UAV to GUIDED_NOGPS
-  mavros_msgs::SetMode guided_request;
-  guided_request.request.custom_mode = OFFBOARD_MODE;
-  guided_request.request.base_mode   = 0;
-  auto mode_call_success             = m_mode_client.call(guided_request);
-  if (!mode_call_success || !guided_request.response.mode_sent) {
-    set_response(false, std::string(OFFBOARD_MODE) + " mode switch failed!");
-    return true;
+  if (req.set_offboard)
+  {
+    mavros_msgs::SetMode guided_request;
+    guided_request.request.custom_mode = OFFBOARD_MODE;
+    guided_request.request.base_mode   = 0;
+    auto mode_call_success             = m_mode_client.call(guided_request);
+    if (!mode_call_success || !guided_request.response.mode_sent) {
+      set_response(false, std::string(OFFBOARD_MODE) + " mode switch failed!");
+      return true;
+    }
   }
 
   // Wait until the mode actually switches
@@ -235,7 +239,36 @@ bool uav_ros_control::UAVManager::land_cb(uav_ros_msgs::Land::Request&  req,
     return true;
   }
 
-  // TODO(lmark): Stop the mission before stopping the trajectory
+  // Clear the mission if it exists
+  if (m_clear_mission.exists()) {
+
+    if (req.force_land)
+    {
+      std_srvs::SetBool clear_mission;
+      clear_mission.request.data = true;
+
+      auto clear_mission_response = m_clear_mission.call(clear_mission);
+      if (!clear_mission_response) {
+        set_response(false, "Unable to cancel the mission");
+        return true;
+      }
+
+      if (!clear_mission.response.success) {
+        set_response(false, "Cancelling mission request failed");
+        return true;
+      }
+    }
+    else 
+    {
+      //TODO(lmark): Message to future lovro
+      //CarrotReference (or UAVControlManager) should not be in HOLD mode while
+      //taking off / landing, since the tracker does not know if the UAV is landing or not.
+      //Solution: Make a LANDOFF mode.
+      set_response(false, "Please set 'force_disarm' to true if using missions.");
+      return true;
+    }
+
+  }
 
   // Check if trajectory is being executed
   const auto tracker_status = m_tracker_state_handler->getData().data;
@@ -276,12 +309,11 @@ bool uav_ros_control::UAVManager::land_cb(uav_ros_msgs::Land::Request&  req,
     return true;
   }
 
-  if (!land_request.response.success)
-  {
+  if (!land_request.response.success) {
     set_response(false, "Land failed with message " + land_request.response.message);
     return true;
   }
-  
+
   set_response(true, "Land successful");
   return true;
 }

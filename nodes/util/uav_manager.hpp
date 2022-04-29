@@ -52,6 +52,7 @@ private:
   ros::ServiceClient m_arming_client;
   ros::ServiceClient m_mode_client;
   ros::ServiceClient m_tracker_reset_client;
+  ros::ServiceClient m_clear_mission;
 
   // Publishers
   ros::Publisher m_joy_publisher;
