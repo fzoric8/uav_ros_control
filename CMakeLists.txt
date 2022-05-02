@@ -113,19 +113,29 @@ target_link_libraries(control_cvx_wrapper control_mpc_cvxgen)
 add_executable(control_manager nodes/control/ControlManagerNode.cpp)
 target_link_libraries(control_manager ${catkin_LIBRARIES})
 
+# UAV manager nodelet
+add_library(uav_manager_nodelet nodes/util/uav_manager.cpp)
+add_dependencies(uav_manager_nodelet ${catkin_EXPORTED_TARGETS})
+target_link_libraries(uav_manager_nodelet ${catkin_LIBRARIES})
+
+
+# Mark executables and/or libraries for installation
 install(
   TARGETS uav_mpc pid_cascade_node carrot_reference_node distance_control_node
-          geo_fence_node
+          geo_fence_node uav_manager_nodelet control_manager
   ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
   LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
   RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
 
 # Mark cpp header files for installation
-install(
-  DIRECTORY include/${PROJECT_NAME}/
-  DESTINATION ${CATKIN_PACKAGE_INCLUDE_DESTINATION}
-  FILES_MATCHING
-  PATTERN "*.hpp"
-  PATTERN ".svn" EXCLUDE)
+install(DIRECTORY include DESTINATION ${CATKIN_PACKAGE_INCLUDE_DESTINATION})
 
-install(FILES plugins.xml DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION})
+# Mark launch folder for installation
+install(DIRECTORY launch DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION})
+
+# Mark config folder for installation
+install(DIRECTORY config DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION})
+
+# Mark all the *.xml files for installation
+install(FILES nodelets.xml package.xml plugins.xml
+        DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION})

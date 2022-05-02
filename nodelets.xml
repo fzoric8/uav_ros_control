@@ -1,0 +1,5 @@
+<library path="lib/libuav_manager_nodelet">
+  <class name="uav_ros_control/UAVManager" type="uav_ros_control::UAVManager" base_class_type="nodelet::Nodelet">
+    <description>UAV manager.</description>
+  </class>
+</library>
