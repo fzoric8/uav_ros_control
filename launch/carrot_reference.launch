@@ -2,6 +2,7 @@
     <arg name="namespace"       default="$(env UAV_NAMESPACE)"/>
     <arg name="odom"            default="mavros/global_position/local"/>
     <arg name="ref"             default="carrot/trajectory"/>
+    <arg name="hold_trajectory" default="position_hold/trajectory"/>
     <arg name="joy_config"      default="joy_control_input.config.yaml"/>
     <arg name="carrot_index"    default="5"/>
     <arg name="carrot_enable"   default="1"/>
@@ -36,8 +37,9 @@
             <rosparam command="load" file="$(arg carrot_config)"/>
 
             <!-- Topic remapping -->
-            <remap from="carrot/trajectory" to="$(arg ref)"/>
-            <remap from="odometry"          to="$(arg odom)"/>
+            <remap from="carrot/trajectory"         to="$(arg ref)"/>
+            <remap from="odometry"                  to="$(arg odom)"/>
+            <remap from="position_hold/trajectory"  to="$(arg hold_trajectory)"/>
         </node>
     </group>
 
