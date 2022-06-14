@@ -57,6 +57,8 @@ bool uav_ros_control::UAVManager::arm_and_takeoff_cb(
   const auto set_response = [&](bool status, std::string message) {
     resp.message = message;
     resp.success = status;
+
+    ROS_INFO_STREAM("[UAVManager] Arm and takeoff response: " << resp);
   };
 
   const auto check_elapsed_time = [&](const std::string& status) {
@@ -114,8 +116,7 @@ bool uav_ros_control::UAVManager::arm_and_takeoff_cb(
   }
 
   // Set the UAV to GUIDED_NOGPS
-  if (req.set_offboard)
-  {
+  if (req.set_offboard) {
     mavros_msgs::SetMode guided_request;
     guided_request.request.custom_mode = OFFBOARD_MODE;
     guided_request.request.base_mode   = 0;
@@ -176,6 +177,8 @@ bool uav_ros_control::UAVManager::arm_and_takeoff_cb(
     }
   }
 
+  ros::Duration(2.0).sleep();
+
   // UAV takeoff request
   uav_ros_msgs::TakeOff takeoff_request;
   takeoff_request.request.rel_alt = req.rel_alt;
@@ -201,6 +204,8 @@ bool uav_ros_control::UAVManager::land_cb(uav_ros_msgs::Land::Request&  req,
   const auto set_response = [&](bool status, std::string message) {
     resp.message = message;
     resp.success = status;
+
+    ROS_INFO_STREAM("[UAVManager] Land response: " << resp);
   };
 
   // Check if odometry is alive
@@ -242,8 +247,7 @@ bool uav_ros_control::UAVManager::land_cb(uav_ros_msgs::Land::Request&  req,
   // Clear the mission if it exists
   if (m_clear_mission.exists()) {
 
-    if (req.force_land)
-    {
+    if (req.force_land) {
       std_srvs::SetBool clear_mission;
       clear_mission.request.data = true;
 
@@ -257,17 +261,14 @@ bool uav_ros_control::UAVManager::land_cb(uav_ros_msgs::Land::Request&  req,
         set_response(false, "Cancelling mission request failed");
         return true;
       }
-    }
-    else 
-    {
-      //TODO(lmark): Message to future lovro
-      //CarrotReference (or UAVControlManager) should not be in HOLD mode while
-      //taking off / landing, since the tracker does not know if the UAV is landing or not.
-      //Solution: Make a LANDOFF mode.
+    } else {
+      // TODO(lmark): Message to future lovro
+      // CarrotReference (or UAVControlManager) should not be in HOLD mode while
+      // taking off / landing, since the tracker does not know if the UAV is landing or
+      // not. Solution: Make a LANDOFF mode.
       set_response(false, "Please set 'force_disarm' to true if using missions.");
       return true;
     }
-
   }
 
   // Check if trajectory is being executed
