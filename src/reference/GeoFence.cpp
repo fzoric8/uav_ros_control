@@ -86,31 +86,31 @@ uav_reference::GeoFence::GeoFence(ros::NodeHandle& nh, std::string filename)
 uav_reference::GeoFence::~GeoFence() {}
 
 void uav_reference::GeoFence::referenceCb(
-  const trajectory_msgs::MultiDOFJointTrajectoryPointConstPtr &msg)
+  const trajectory_msgs::MultiDOFJointTrajectoryPointConstPtr& msg)
 {
   geometry_msgs::Vector3 current_position = msg->transforms.front().translation;
   trajectory_msgs::MultiDOFJointTrajectoryPoint new_msg = *msg;
 
-  bool inside_planar = checkInside2D(current_position);
-
   // If inside specified area, limit the height if necessary and forward the message.
   if (checkInside2D(current_position)) {
+    ROS_INFO_THROTTLE(3.0, "[GeoFence] Inside");
     new_msg.transforms.front().translation.z =
       limitValue(current_position.z, _min_z, _max_z);
-    _last_valid_position = msg->transforms.front().translation;
     _pub.publish(new_msg);
   }
   // Otherwise, find the closest allowed position and publish that.
   else {
-    // std::cout << "outside" << std::endl;
+    ROS_INFO_THROTTLE(3.0, "[GeoFence] outside");
     geometry_msgs::Vector3 new_ref = findClosestPoint(current_position);
-    new_ref.z = limitValue(current_position.z, _min_z, _max_z);
+    new_ref.z                      = limitValue(current_position.z, _min_z, _max_z);
 
     new_msg.transforms.front().translation = new_ref;
-    new_msg.velocities.front() = geometry_msgs::Twist();
-    new_msg.accelerations.front() = geometry_msgs::Twist();
+    new_msg.velocities.front()             = geometry_msgs::Twist();
+    new_msg.accelerations.front()          = geometry_msgs::Twist();
     _pub.publish(new_msg);
   }
+
+  _last_valid_position = new_msg.transforms.front().translation;
 }
 
 geometry_msgs::Vector3 uav_reference::GeoFence::findClosestPoint(
