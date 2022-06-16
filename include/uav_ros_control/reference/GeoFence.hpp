@@ -165,9 +165,9 @@ private:
                                 geometry_msgs::Vector3 P1,
                                 geometry_msgs::Vector3 P2);
 
-  tf_util::GlobalToLocal _global_to_local;// Object for converting GPS points
-  geometry_msgs::Vector3 _last_valid_position;// Last received position within fence
-  geometry_msgs::Vector3 _centroid;// Centroid of the allowed geo fence area
+  tf_util::GlobalToLocal   _global_to_local;// Object for converting GPS points
+  geometry_msgs::Transform _last_valid_position;// Last received position within fence
+  geometry_msgs::Vector3   _centroid;// Centroid of the allowed geo fence area
   std::vector<geometry_msgs::Vector3> _vertices;// GPS points definining fence polygon
   double                              _max_z;// Maximum allowed flying height
   double                              _min_z;// Minimum allowed flying height

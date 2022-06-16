@@ -1,11 +1,13 @@
 #include "geometry_msgs/PoseStamped.h"
 #include "geometry_msgs/Vector3.h"
 #include "std_msgs/String.h"
+#include "tf2/LinearMath/Quaternion.h"
 #include <math.h>
 #include <uav_ros_control/reference/GeoFence.hpp>
 #include <typeinfo>
 #include <uav_ros_lib/trajectory/trajectory_helper.hpp>
 #include <uav_ros_lib/ros_convert.hpp>
+#include <tf2/LinearMath/Quaternion.h>
 
 uav_reference::GeoFence::GeoFence(ros::NodeHandle& nh, std::string filename)
   : _global_to_local(nh)
@@ -119,8 +121,8 @@ void uav_reference::GeoFence::referenceCb(
   geometry_msgs::Vector3 current_position = msg->transforms.front().translation;
   trajectory_msgs::MultiDOFJointTrajectoryPoint new_msg = *msg;
 
-  bool        is_inside    = checkInside2D(current_position);
-  std::string fence_status = is_inside ? "INSIDE" : "OUTSIDE";
+  bool        is_inside         = checkInside2D(current_position);
+  std::string fence_status      = is_inside ? "INSIDE" : "OUTSIDE";
   std::string activation_status = _is_active ? "ACTIVE" : "OFF";
 
   // publish fence status
@@ -150,22 +152,39 @@ void uav_reference::GeoFence::referenceCb(
 
   // Check if the next reference is close to previous
   const auto dist = trajectory_helper::distance(new_msg.transforms.front().translation,
-                                                _last_valid_position);
+                                                _last_valid_position.translation);
   if (_first_ref && dist > _max_jump) {
     ROS_WARN_THROTTLE(0.5, "[Geofence] JUMP with distance %.3f. Smoothing...", dist);
     new_msg.transforms.front().translation.x =
-      _last_valid_position.x * (1 - _jump_constant)
+      _last_valid_position.translation.x * (1 - _jump_constant)
       + new_msg.transforms.front().translation.x * _jump_constant;
     new_msg.transforms.front().translation.y =
-      _last_valid_position.y * (1 - _jump_constant)
+      _last_valid_position.translation.y * (1 - _jump_constant)
       + new_msg.transforms.front().translation.y * _jump_constant;
     new_msg.transforms.front().translation.z =
-      _last_valid_position.z * (1 - _jump_constant)
+      _last_valid_position.translation.z * (1 - _jump_constant)
       + new_msg.transforms.front().translation.z * _jump_constant;
+
+    // Interpolate angles
+    tf2::Quaternion old_q(_last_valid_position.rotation.x,
+                          _last_valid_position.rotation.y,
+                          _last_valid_position.rotation.z,
+                          _last_valid_position.rotation.w);
+
+    tf2::Quaternion new_q(new_msg.transforms.front().rotation.x,
+                          new_msg.transforms.front().rotation.y,
+                          new_msg.transforms.front().rotation.z,
+                          new_msg.transforms.front().rotation.w);
+
+    auto slerperd_q                       = old_q.slerp(new_q, _jump_constant);
+    new_msg.transforms.front().rotation.x = slerperd_q.x();
+    new_msg.transforms.front().rotation.y = slerperd_q.y();
+    new_msg.transforms.front().rotation.z = slerperd_q.z();
+    new_msg.transforms.front().rotation.w = slerperd_q.w();
   }
 
   _pub.publish(new_msg);
-  _last_valid_position = new_msg.transforms.front().translation;
+  _last_valid_position = new_msg.transforms.front();
   _first_ref           = true;
 
   // Publish pose for debug
@@ -203,7 +222,7 @@ geometry_msgs::Vector3 uav_reference::GeoFence::findClosestPoint(
   if (min_dist_from_current < INT_MAX) {
     return new_ref_return;
   } else {
-    return _last_valid_position;
+    return _last_valid_position.translation;
   }
 
 
