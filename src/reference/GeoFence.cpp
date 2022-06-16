@@ -1,6 +1,11 @@
+#include "geometry_msgs/PoseStamped.h"
 #include "geometry_msgs/Vector3.h"
+#include "std_msgs/String.h"
+#include <math.h>
 #include <uav_ros_control/reference/GeoFence.hpp>
 #include <typeinfo>
+#include <uav_ros_lib/trajectory/trajectory_helper.hpp>
+#include <uav_ros_lib/ros_convert.hpp>
 
 uav_reference::GeoFence::GeoFence(ros::NodeHandle& nh, std::string filename)
   : _global_to_local(nh)
@@ -21,6 +26,8 @@ uav_reference::GeoFence::GeoFence(ros::NodeHandle& nh, std::string filename)
   _min_z         = config["min_alt"].as<double>();
   _max_jump      = config["max_jump"].as<double>();
   _jump_constant = config["jump_constant"].as<double>();
+  _frame_id      = config["frame_id"].as<std::string>();
+
   for (YAML::const_iterator ti = constraints_list.begin(); ti != constraints_list.end();
        ++ti) {
     const YAML::Node&      constraint  = *ti;
@@ -81,6 +88,8 @@ uav_reference::GeoFence::GeoFence(ros::NodeHandle& nh, std::string filename)
 
   // Define Publisher
   _pub = nh.advertise<trajectory_msgs::MultiDOFJointTrajectoryPoint>("geofence_out", 1);
+  _fence_pose_pub   = nh.advertise<geometry_msgs::PoseStamped>("geofence/pose", 1);
+  _fence_status_pub = nh.advertise<std_msgs::String>("geofence/status", 1);
 
   // Define Subscriber
   _sub = nh.subscribe("geofence_in", 1, &uav_reference::GeoFence::referenceCb, this);
@@ -89,7 +98,7 @@ uav_reference::GeoFence::GeoFence(ros::NodeHandle& nh, std::string filename)
 }
 
 bool uav_reference::GeoFence::activate_cb(std_srvs::SetBool::Request&  req,
-                           std_srvs::SetBool::Response& resp)
+                                          std_srvs::SetBool::Response& resp)
 {
   _is_active = req.data;
   if (_is_active) {
@@ -110,11 +119,19 @@ void uav_reference::GeoFence::referenceCb(
   geometry_msgs::Vector3 current_position = msg->transforms.front().translation;
   trajectory_msgs::MultiDOFJointTrajectoryPoint new_msg = *msg;
 
+  bool        is_inside    = checkInside2D(current_position);
+  std::string fence_status = is_inside ? "INSIDE" : "OUTSIDE";
+
+  // publish fence status
+  std_msgs::String status_msg;
+  status_msg.data = fence_status;
+  _fence_status_pub.publish(status_msg);
+
   // If inside specified area, limit the height if necessary and forward the message.
   if (!_is_active) {
-    ROS_INFO_THROTTLE(3.0, "[GeoFence] deactivated");
+    ROS_INFO_THROTTLE(3.0, "[GeoFence] deactivated. Currently %s", fence_status.c_str());
     // don't do anything
-  } else if (checkInside2D(current_position)) {
+  } else if (is_inside) {
     ROS_INFO_THROTTLE(3.0, "[GeoFence] Inside");
     new_msg.transforms.front().translation.z =
       limitValue(current_position.z, _min_z, _max_z);
@@ -148,6 +165,14 @@ void uav_reference::GeoFence::referenceCb(
 
   _pub.publish(new_msg);
   _last_valid_position = new_msg.transforms.front().translation;
+  _first_ref           = true;
+
+  // Publish pose for debug
+  geometry_msgs::PoseStamped pose_msg;
+  pose_msg.header.frame_id = _frame_id;
+  pose_msg.header.stamp    = ros::Time::now();
+  pose_msg.pose            = ros_convert::trajectory_point_to_pose(new_msg);
+  _fence_pose_pub.publish(pose_msg);
 }
 
 geometry_msgs::Vector3 uav_reference::GeoFence::findClosestPoint(

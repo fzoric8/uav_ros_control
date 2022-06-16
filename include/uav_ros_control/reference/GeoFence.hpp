@@ -172,7 +172,10 @@ private:
   double                              _max_z;// Maximum allowed flying height
   double                              _min_z;// Minimum allowed flying height
 
+  std::string     _frame_id;
   ros::Publisher  _pub;
+  ros::Publisher  _fence_pose_pub;
+  ros::Publisher  _fence_status_pub;
   ros::Subscriber _sub;
 
   bool               _is_active = false;
