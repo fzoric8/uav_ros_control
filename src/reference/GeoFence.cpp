@@ -17,8 +17,10 @@ uav_reference::GeoFence::GeoFence(ros::NodeHandle& nh, std::string filename)
   ros::spinOnce();
 
   ROS_INFO_STREAM("Constraint points converted to local frame:");
-  _max_z = config["max_alt"].as<double>();
-  _min_z = config["min_alt"].as<double>();
+  _max_z         = config["max_alt"].as<double>();
+  _min_z         = config["min_alt"].as<double>();
+  _max_jump      = config["max_jump"].as<double>();
+  _jump_constant = config["jump_constant"].as<double>();
   for (YAML::const_iterator ti = constraints_list.begin(); ti != constraints_list.end();
        ++ti) {
     const YAML::Node&      constraint  = *ti;
@@ -126,6 +128,22 @@ void uav_reference::GeoFence::referenceCb(
     new_msg.transforms.front().translation = new_ref;
     new_msg.velocities.front()             = geometry_msgs::Twist();
     new_msg.accelerations.front()          = geometry_msgs::Twist();
+  }
+
+  // Check if the next reference is close to previous
+  const auto dist = trajectory_helper::distance(new_msg.transforms.front().translation,
+                                                _last_valid_position);
+  if (_first_ref && dist > _max_jump) {
+    ROS_WARN_THROTTLE(0.5, "[Geofence] JUMP with distance %.3f. Smoothing...", dist);
+    new_msg.transforms.front().translation.x =
+      _last_valid_position.x * (1 - _jump_constant)
+      + new_msg.transforms.front().translation.x * _jump_constant;
+    new_msg.transforms.front().translation.y =
+      _last_valid_position.y * (1 - _jump_constant)
+      + new_msg.transforms.front().translation.y * _jump_constant;
+    new_msg.transforms.front().translation.z =
+      _last_valid_position.z * (1 - _jump_constant)
+      + new_msg.transforms.front().translation.z * _jump_constant;
   }
 
   _pub.publish(new_msg);

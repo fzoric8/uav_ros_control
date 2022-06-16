@@ -1,3 +1,6 @@
+max_jump: 2
+jump_constant: 0.01
+
 max_alt: 3
 min_alt: 0.5
 

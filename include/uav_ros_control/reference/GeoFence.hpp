@@ -178,6 +178,11 @@ private:
   bool               _is_active = false;
   ros::ServiceServer _activate_srv;
   bool activate_cb(std_srvs::SetBool::Request& req, std_srvs::SetBool::Response& resp);
+
+  // Reference jump params
+  double _max_jump;
+  double _jump_constant;
+  bool   _first_ref = false;
 };
 
 void runDefault(uav_reference::GeoFence& gf, ros::NodeHandle& nh);
