@@ -42,7 +42,7 @@
     <group if="$(eval arg('geofence_enabled') == true)">
         <param name="$(arg namespace)/gps_constraints_filename" value="$(arg geofence_config)"/>
         <node name="geo_fence" pkg="uav_ros_control" type="geo_fence_node" output="screen" 
-            ns="$(arg namespace)" launch-prefix="">
+            ns="$(arg namespace)" launch-prefix="" required="true">
             <remap from="geofence_in"   to="$(arg carrot_out)"/>
             <remap from="geofence_out"  to="$(arg pid_in)"/>
         </node>
