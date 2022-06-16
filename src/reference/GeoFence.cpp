@@ -1,27 +1,30 @@
 #include <uav_ros_control/reference/GeoFence.hpp>
 #include <typeinfo>
 
-uav_reference::GeoFence::GeoFence(ros::NodeHandle &nh, std::string filename)
+uav_reference::GeoFence::GeoFence(ros::NodeHandle& nh, std::string filename)
   : _global_to_local(nh)
 {
   ROS_INFO_STREAM("Loading GPS constraint points from file:\n" << filename);
-  YAML::Node config = YAML::LoadFile(filename);
+  YAML::Node config           = YAML::LoadFile(filename);
   YAML::Node constraints_list = config["gps_constraints"];
   ROS_INFO_STREAM("Loaded GPS points:\n" << constraints_list);
+
+  YAML::Node local_constraints_list = config["local_constraints"];
+  ROS_INFO_STREAM("Loaded local points:\n" << local_constraints_list);
 
   ros::Duration(1).sleep();
   ros::spinOnce();
 
   ROS_INFO_STREAM("Constraint points converted to local frame:");
-  _max_z = 1000;
-  _min_z = 0;
+  _max_z = config["max_alt"].as<double>();
+  _min_z = config["min_alt"].as<double>();
   for (YAML::const_iterator ti = constraints_list.begin(); ti != constraints_list.end();
        ++ti) {
-    const YAML::Node &constraint = *ti;
-    double lat = constraint["lat"].as<double>();
-    double lon = constraint["lon"].as<double>();
-    double alt = constraint["alt"].as<double>();
-    Eigen::Vector3d temp_vector = _global_to_local.toLocal(lat, lon, alt);
+    const YAML::Node&      constraint  = *ti;
+    double                 lat         = constraint["lat"].as<double>();
+    double                 lon         = constraint["lon"].as<double>();
+    double                 alt         = constraint["alt"].as<double>();
+    Eigen::Vector3d        temp_vector = _global_to_local.toLocal(lat, lon, alt);
     geometry_msgs::Vector3 vertex;
     vertex.x = temp_vector.x();
     vertex.y = temp_vector.y();
@@ -31,14 +34,29 @@ uav_reference::GeoFence::GeoFence(ros::NodeHandle &nh, std::string filename)
     std::cout << "X: " << vertex.x << ", Y: " << vertex.y << ", Z: " << vertex.z
               << std::endl;
   }
+
+  for (const auto& local_constraint : local_constraints_list) {
+    geometry_msgs::Vector3 vertex;
+    vertex.x = local_constraint["x"].as<double>();
+    vertex.y = local_constraint["y"].as<double>();
+    _vertices.push_back(vertex);
+    ROS_INFO_STREAM("[GeoFence] got local vertex:\n" << vertex);
+  }
+
+  if (_vertices.empty()) {
+    ROS_FATAL("[GeoFence] No vertices provided. Exiting...");
+    ros::shutdown();
+    return;
+  }
+
   ROS_INFO_STREAM("Maximum height: " << _max_z);
   _vertices.push_back(_vertices[0]);
 
   // Find centroid of polygon.
-  double area = 0;
+  double area  = 0;
   double sum_x = 0;
   double sum_y = 0;
-  int n = _vertices.size() - 1;
+  int    n     = _vertices.size() - 1;
   for (int i = 0; i < n; ++i) {
     area =
       area + (_vertices[i].x * _vertices[i + 1].y - _vertices[i + 1].x * _vertices[i].y);
@@ -50,8 +68,10 @@ uav_reference::GeoFence::GeoFence(ros::NodeHandle &nh, std::string filename)
       sum_y
       + (_vertices[i].y + _vertices[i + 1].y)
           * (_vertices[i].x * _vertices[i + 1].y - _vertices[i + 1].x * _vertices[i].y);
+
+    ROS_INFO("[%.5f, %.5f, %.5f]", area, sum_x, sum_y);
   }
-  area = 1.0 / 2 * area;
+  area        = 1.0 / 2 * area;
   _centroid.x = 1.0 / (6 * area) * sum_x;
   _centroid.y = 1.0 / (6 * area) * sum_y;
   ROS_INFO_STREAM("Centroid of constraints in local frame:\n" << _centroid);
