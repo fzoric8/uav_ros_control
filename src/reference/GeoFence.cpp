@@ -1,5 +1,6 @@
 #include "geometry_msgs/PoseStamped.h"
 #include "geometry_msgs/Vector3.h"
+#include "std_msgs/Bool.h"
 #include "std_msgs/String.h"
 #include "tf2/LinearMath/Quaternion.h"
 #include <math.h>
@@ -26,8 +27,6 @@ uav_reference::GeoFence::GeoFence(ros::NodeHandle& nh, std::string filename)
   ROS_INFO_STREAM("Constraint points converted to local frame:");
   _max_z         = config["max_alt"].as<double>();
   _min_z         = config["min_alt"].as<double>();
-  _max_jump      = config["max_jump"].as<double>();
-  _jump_constant = config["jump_constant"].as<double>();
   _frame_id      = config["frame_id"].as<std::string>();
 
   for (YAML::const_iterator ti = constraints_list.begin(); ti != constraints_list.end();
@@ -92,6 +91,7 @@ uav_reference::GeoFence::GeoFence(ros::NodeHandle& nh, std::string filename)
   _pub = nh.advertise<trajectory_msgs::MultiDOFJointTrajectoryPoint>("geofence_out", 1);
   _fence_pose_pub   = nh.advertise<geometry_msgs::PoseStamped>("geofence/pose", 1);
   _fence_status_pub = nh.advertise<std_msgs::String>("geofence/status", 1);
+  _fence_active_pub = nh.advertise<std_msgs::Bool>("geofence/active", 1);
 
   // Define Subscriber
   _sub = nh.subscribe("geofence_in", 1, &uav_reference::GeoFence::referenceCb, this);
@@ -130,6 +130,11 @@ void uav_reference::GeoFence::referenceCb(
   status_msg.data = activation_status + " - " + fence_status;
   _fence_status_pub.publish(status_msg);
 
+  // publis is active
+  std_msgs::Bool active_msg;
+  active_msg.data = _is_active;
+  _fence_active_pub.publish(active_msg);
+
   // If inside specified area, limit the height if necessary and forward the message.
   if (!_is_active) {
     ROS_INFO_THROTTLE(3.0, "[GeoFence] deactivated. Currently %s", fence_status.c_str());
@@ -150,42 +155,8 @@ void uav_reference::GeoFence::referenceCb(
     new_msg.accelerations.front()          = geometry_msgs::Twist();
   }
 
-  // Check if the next reference is close to previous
-  const auto dist = trajectory_helper::distance(new_msg.transforms.front().translation,
-                                                _last_valid_position.translation);
-  if (_first_ref && dist > _max_jump) {
-    ROS_WARN_THROTTLE(0.5, "[Geofence] JUMP with distance %.3f. Smoothing...", dist);
-    new_msg.transforms.front().translation.x =
-      _last_valid_position.translation.x * (1 - _jump_constant)
-      + new_msg.transforms.front().translation.x * _jump_constant;
-    new_msg.transforms.front().translation.y =
-      _last_valid_position.translation.y * (1 - _jump_constant)
-      + new_msg.transforms.front().translation.y * _jump_constant;
-    new_msg.transforms.front().translation.z =
-      _last_valid_position.translation.z * (1 - _jump_constant)
-      + new_msg.transforms.front().translation.z * _jump_constant;
-
-    // Interpolate angles
-    tf2::Quaternion old_q(_last_valid_position.rotation.x,
-                          _last_valid_position.rotation.y,
-                          _last_valid_position.rotation.z,
-                          _last_valid_position.rotation.w);
-
-    tf2::Quaternion new_q(new_msg.transforms.front().rotation.x,
-                          new_msg.transforms.front().rotation.y,
-                          new_msg.transforms.front().rotation.z,
-                          new_msg.transforms.front().rotation.w);
-
-    auto slerperd_q                       = old_q.slerp(new_q, _jump_constant);
-    new_msg.transforms.front().rotation.x = slerperd_q.x();
-    new_msg.transforms.front().rotation.y = slerperd_q.y();
-    new_msg.transforms.front().rotation.z = slerperd_q.z();
-    new_msg.transforms.front().rotation.w = slerperd_q.w();
-  }
-
   _pub.publish(new_msg);
   _last_valid_position = new_msg.transforms.front();
-  _first_ref           = true;
 
   // Publish pose for debug
   geometry_msgs::PoseStamped pose_msg;
