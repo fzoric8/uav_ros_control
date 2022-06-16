@@ -82,6 +82,22 @@ uav_reference::GeoFence::GeoFence(ros::NodeHandle& nh, std::string filename)
 
   // Define Subscriber
   _sub = nh.subscribe("geofence_in", 1, &uav_reference::GeoFence::referenceCb, this);
+
+  _activate_srv = nh.advertiseService("geofence/activate", &GeoFence::activate_cb, this);
+}
+
+bool uav_reference::GeoFence::activate_cb(std_srvs::SetBool::Request&  req,
+                           std_srvs::SetBool::Response& resp)
+{
+  _is_active = req.data;
+  if (_is_active) {
+    resp.message = "Geofence activated";
+  } else {
+    resp.message = "GeoFence deactivated";
+  }
+
+  resp.success = true;
+  return true;
 }
 
 uav_reference::GeoFence::~GeoFence() {}
@@ -93,11 +109,13 @@ void uav_reference::GeoFence::referenceCb(
   trajectory_msgs::MultiDOFJointTrajectoryPoint new_msg = *msg;
 
   // If inside specified area, limit the height if necessary and forward the message.
-  if (checkInside2D(current_position)) {
+  if (!_is_active) {
+    ROS_INFO_THROTTLE(3.0, "[GeoFence] deactivated");
+    // don't do anything
+  } else if (checkInside2D(current_position)) {
     ROS_INFO_THROTTLE(3.0, "[GeoFence] Inside");
     new_msg.transforms.front().translation.z =
       limitValue(current_position.z, _min_z, _max_z);
-    _pub.publish(new_msg);
   }
   // Otherwise, find the closest allowed position and publish that.
   else {
@@ -108,9 +126,9 @@ void uav_reference::GeoFence::referenceCb(
     new_msg.transforms.front().translation = new_ref;
     new_msg.velocities.front()             = geometry_msgs::Twist();
     new_msg.accelerations.front()          = geometry_msgs::Twist();
-    _pub.publish(new_msg);
   }
 
+  _pub.publish(new_msg);
   _last_valid_position = new_msg.transforms.front().translation;
 }
 

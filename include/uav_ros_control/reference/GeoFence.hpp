@@ -6,7 +6,9 @@
 #include <trajectory_msgs/MultiDOFJointTrajectoryPoint.h>
 #include <geometry_msgs/Vector3.h>
 #include <geometry_msgs/Twist.h>
+#include <std_srvs/SetBool.h>
 #include <iostream>
+#include "ros/service_server.h"
 #include "yaml-cpp/yaml.h"
 #include <vector>
 #include <stdbool.h>
@@ -172,6 +174,10 @@ private:
 
   ros::Publisher  _pub;
   ros::Subscriber _sub;
+
+  bool               _is_active = false;
+  ros::ServiceServer _activate_srv;
+  bool activate_cb(std_srvs::SetBool::Request& req, std_srvs::SetBool::Response& resp);
 };
 
 void runDefault(uav_reference::GeoFence& gf, ros::NodeHandle& nh);
