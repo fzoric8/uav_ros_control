@@ -12,11 +12,11 @@
 #include <stdbool.h>
 #include <cmath>
 
-bool lineIntersection(geometry_msgs::Vector3 fixed_1,
-  geometry_msgs::Vector3 fixed_2,
-  geometry_msgs::Vector3 fixed_c,
-  geometry_msgs::Vector3 relative,
-  geometry_msgs::Vector3 &new_reference)
+bool lineIntersection(geometry_msgs::Vector3  fixed_1,
+                      geometry_msgs::Vector3  fixed_2,
+                      geometry_msgs::Vector3  fixed_c,
+                      geometry_msgs::Vector3  relative,
+                      geometry_msgs::Vector3& new_reference)
 {
   // Line AB represented as a1x + b1y = c1
   double a1 = fixed_2.y - fixed_1.y;
@@ -52,44 +52,71 @@ double calcDistance(geometry_msgs::Vector3 v1, geometry_msgs::Vector3 v2)
 }
 
 double compareVectors(std::pair<geometry_msgs::Vector3, double> v1,
-  std::pair<geometry_msgs::Vector3, double> v2)
+                      std::pair<geometry_msgs::Vector3, double> v2)
 {
   return (v1.second < v2.second);
 }
 
 bool isPointOnLine(geometry_msgs::Vector3 point,
-  geometry_msgs::Vector3 v1,
-  geometry_msgs::Vector3 v2)
+                   geometry_msgs::Vector3 v1,
+                   geometry_msgs::Vector3 v2)
 {
 
-  double dx = v2.x - v1.x;
-  double dy = v2.y - v1.y;
-  double epsilon = 0.003 * (dx * dx + dy * dy);
+  double dx      = v2.x - v1.x;
+  double dy      = v2.y - v1.y;
+  double epsilon = 0.005 * (dx * dx + dy * dy);
 
   double pdp = (v1.x - point.x) * (v2.y - point.y) - (v1.y - point.y) * (v2.x - point.x);
+  ROS_DEBUG("isPointOnLine: %.4f < %.4f", fabs(pdp), epsilon);
 
-  return abs(pdp) < epsilon;
+  return fabs(pdp) < epsilon;
+}
+
+template<typename T> inline bool less_or_equal(T lhs, T rhs)
+{
+  static constexpr auto TOL = 1e-4;
+  return lhs < rhs || fabs(lhs - rhs) < TOL;
 }
 
 bool isPointOnLineSegment(geometry_msgs::Vector3 point,
-  geometry_msgs::Vector3 v1,
-  geometry_msgs::Vector3 v2)
+                          geometry_msgs::Vector3 v1,
+                          geometry_msgs::Vector3 v2)
 {
   // If the proj is on the polygon, that is the closest point.
-  if (!((v1.x <= point.x && point.x <= v2.x) || (v2.x <= point.x && point.x <= v1.x))) {
-    // test point not in x-range
+  if (!(
+
+        (less_or_equal(v1.x, point.x) && less_or_equal(point.x, v2.x))
+        || (less_or_equal(v2.x, point.x) && less_or_equal(point.x, v1.x)))) {
+    ROS_DEBUG("x range: [%.2f <= %.2f && %.2f <= %.2f] || [%.2f <= %.2f && %.2f <= %.2f]",
+              v1.x,
+              point.x,
+              point.x,
+              v2.x,
+              v2.x,
+              point.x,
+              point.x,
+              v1.x);
     return false;
   }
-  if (!((v1.y <= point.y && point.y <= v2.y) || (v2.y <= point.y && point.y <= v1.y))) {
-    // test point not in y-range
+  if (!((less_or_equal(v1.y, point.y) && less_or_equal(point.y, v2.y))
+        || (less_or_equal(v2.y, point.y) && less_or_equal(point.y, v1.y)))) {
+    ROS_DEBUG("y range: [%.2f <= %.2f && %.2f <= %.2f] || [%.2f <= %.2f && %.2f <= %.2f]",
+              v1.y,
+              point.y,
+              point.y,
+              v2.y,
+              v2.y,
+              point.y,
+              point.y,
+              v1.y);
     return false;
   }
   return isPointOnLine(point, v1, v2);
 }
 
 geometry_msgs::Vector3 findProjection(geometry_msgs::Vector3 v1,
-  geometry_msgs::Vector3 v2,
-  geometry_msgs::Vector3 p)
+                                      geometry_msgs::Vector3 v2,
+                                      geometry_msgs::Vector3 p)
 {
   // Project the current point on line between them.
   geometry_msgs::Vector3 e1;
@@ -100,7 +127,7 @@ geometry_msgs::Vector3 findProjection(geometry_msgs::Vector3 v1,
   e2.x = p.x - v1.x;
   e2.y = p.y - v1.y;
 
-  double dp = e1.x * e2.x + e1.y * e2.y;
+  double dp  = e1.x * e2.x + e1.y * e2.y;
   double len = e1.x * e1.x + e1.y * e1.y;
 
   geometry_msgs::Vector3 proj;
@@ -124,29 +151,29 @@ namespace uav_reference {
 class GeoFence
 {
 public:
-  GeoFence(ros::NodeHandle &, std::string filename);
+  GeoFence(ros::NodeHandle&, std::string filename);
   virtual ~GeoFence();
 
 private:
-  void referenceCb(const trajectory_msgs::MultiDOFJointTrajectoryPointConstPtr &msg);
+  void referenceCb(const trajectory_msgs::MultiDOFJointTrajectoryPointConstPtr& msg);
   bool checkInside2D(geometry_msgs::Vector3 current);
   geometry_msgs::Vector3 findClosestPoint(geometry_msgs::Vector3 current);
-  double limitZ(double z);
-  int isLeft(geometry_msgs::Vector3 P0,
-    geometry_msgs::Vector3 P1,
-    geometry_msgs::Vector3 P2);
+  double                 limitZ(double z);
+  int                    isLeft(geometry_msgs::Vector3 P0,
+                                geometry_msgs::Vector3 P1,
+                                geometry_msgs::Vector3 P2);
 
   tf_util::GlobalToLocal _global_to_local;// Object for converting GPS points
   geometry_msgs::Vector3 _last_valid_position;// Last received position within fence
   geometry_msgs::Vector3 _centroid;// Centroid of the allowed geo fence area
   std::vector<geometry_msgs::Vector3> _vertices;// GPS points definining fence polygon
-  double _max_z;// Maximum allowed flying height
-  double _min_z;// Minimum allowed flying height
+  double                              _max_z;// Maximum allowed flying height
+  double                              _min_z;// Minimum allowed flying height
 
-  ros::Publisher _pub;
+  ros::Publisher  _pub;
   ros::Subscriber _sub;
 };
 
-void runDefault(uav_reference::GeoFence &gf, ros::NodeHandle &nh);
+void runDefault(uav_reference::GeoFence& gf, ros::NodeHandle& nh);
 }// namespace uav_reference
 #endif
