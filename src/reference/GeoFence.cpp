@@ -1,3 +1,4 @@
+#include "geometry_msgs/Vector3.h"
 #include <uav_ros_control/reference/GeoFence.hpp>
 #include <typeinfo>
 
@@ -122,21 +123,21 @@ geometry_msgs::Vector3 uav_reference::GeoFence::findClosestPoint(
   // and line from centroid to current position.
   geometry_msgs::Vector3 new_ref;
   geometry_msgs::Vector3 new_ref_return;
-  double min_dist_from_current = INT_MAX;
+  double                 min_dist_from_current = INT_MAX;
   for (int i = 0; i < n; ++i) {
-    if (lineIntersection(_vertices[i], _vertices[i + 1], _centroid, current, new_ref))
-      ;
-    {
+    if (lineIntersection(_vertices[i], _vertices[i + 1], _centroid, current, new_ref)) {
       if (isPointOnLineSegment(new_ref, _vertices[i], _vertices[i + 1])) {
         double dist_from_current = calcDistance(current, new_ref);
         if (dist_from_current < min_dist_from_current) {
           min_dist_from_current = dist_from_current;
-          new_ref_return = new_ref;
+          new_ref_return        = new_ref;
         }
       }
     }
   }
 
+  ROS_DEBUG_STREAM(min_dist_from_current);
+  // TODO: Fix here
   if (min_dist_from_current < INT_MAX) {
     return new_ref_return;
   } else {
@@ -185,7 +186,7 @@ geometry_msgs::Vector3 uav_reference::GeoFence::findClosestPoint(
 bool uav_reference::GeoFence::checkInside2D(geometry_msgs::Vector3 current)
 {
   int wn = 0;// the winding number counter
-  int n = _vertices.size() - 1;// number of points in fence polygon
+  int n  = _vertices.size() - 1;// number of points in fence polygon
 
   // std::cout << "Current: " << current << std::endl;
   // loop through all edges of the polygon
@@ -212,14 +213,14 @@ bool uav_reference::GeoFence::checkInside2D(geometry_msgs::Vector3 current)
 //            <0 for P2  right of the line
 //    See: Algorithm 1 "Area of Triangles and Polygons"
 int uav_reference::GeoFence::isLeft(geometry_msgs::Vector3 P0,
-  geometry_msgs::Vector3 P1,
-  geometry_msgs::Vector3 P2)
+                                    geometry_msgs::Vector3 P1,
+                                    geometry_msgs::Vector3 P2)
 {
 
   return ((P1.x - P0.x) * (P2.y - P0.y) - (P2.x - P0.x) * (P1.y - P0.y));
 }
 
-void uav_reference::runDefault(uav_reference::GeoFence &geoFenceObj, ros::NodeHandle &nh)
+void uav_reference::runDefault(uav_reference::GeoFence& geoFenceObj, ros::NodeHandle& nh)
 {
   ros::spin();
 }
