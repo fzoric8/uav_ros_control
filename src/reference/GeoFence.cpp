@@ -121,10 +121,11 @@ void uav_reference::GeoFence::referenceCb(
 
   bool        is_inside    = checkInside2D(current_position);
   std::string fence_status = is_inside ? "INSIDE" : "OUTSIDE";
+  std::string activation_status = _is_active ? "ACTIVE" : "OFF";
 
   // publish fence status
   std_msgs::String status_msg;
-  status_msg.data = fence_status;
+  status_msg.data = activation_status + " - " + fence_status;
   _fence_status_pub.publish(status_msg);
 
   // If inside specified area, limit the height if necessary and forward the message.
