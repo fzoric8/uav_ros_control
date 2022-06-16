@@ -11,7 +11,7 @@
     <arg name="default_params"        default="$(find uav_ros_control)/config/control/position_control.params.yaml"/>
 
     <include file="$(find uav_ros_control)/launch/carrot_reference.launch">
-        <arg name="namespace" value="$(arg nam espace)"/>
+        <arg name="namespace" value="$(arg namespace)"/>
         <arg name="ref" value="$(arg carrot_out)"/>
         <arg name="odom" value="$(arg odometry)"/>
         <arg name="manual_takeoff"  default="$(arg manual_takeoff)"/>

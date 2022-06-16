@@ -13,6 +13,8 @@
     <arg name="carrot_land"           default="false"/>
     <arg name="land_disarm_enabled"   default="false"/>
     <arg name="carrot_config"         default="$(find uav_ros_control)/config/reference/carrot_config.yaml" />
+    <arg name="geofence_enabled"      default="false"/>
+    <arg name="geofence_config"       default="$(find uav_ros_control)/config/reference/geofence_constraints.yaml"/>
 
     <include file="$(find uav_ros_control)/launch/carrot_reference.launch">
         <arg name="namespace"       value="$(arg namespace)"/>
@@ -35,4 +37,15 @@
         <arg name="local_callback_enable" value="$(arg local_callback_enable)"/>
         <arg name="default_params"      value="$(arg default_params)"/>
     </include>
+
+    <!-- Add geofence if enabled -->
+    <group if="$(eval arg('geofence_enabled') == true)">
+        <param name="$(arg namespace)/gps_constraints_filename" value="$(arg geofence_config)"/>
+        <node name="geo_fence" pkg="uav_ros_control" type="geo_fence_node" output="screen" 
+            ns="$(arg namespace)" launch-prefix="">
+            <remap from="geofence_in"   to="$(arg carrot_out)"/>
+            <remap from="geofence_out"  to="$(arg pid_in)"/>
+        </node>
+    </group>
+
 </launch>
