@@ -123,6 +123,7 @@ target_link_libraries(uav_manager_nodelet ${catkin_LIBRARIES})
 install(
   TARGETS uav_mpc pid_cascade_node carrot_reference_node distance_control_node
           geo_fence_node uav_manager_nodelet control_manager uav_pid uav_util
+          reference_lib
   ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
   LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
   RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
