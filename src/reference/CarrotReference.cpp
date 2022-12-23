@@ -44,7 +44,7 @@ uav_reference::CarrotReference::CarrotReference(ros::NodeHandle& nh)
 
   _setModeToLandClient = nh.serviceClient<mavros_msgs::SetMode>("mavros/set_mode");
 
-  _intResetClient = nh.serviceClient<std_srvs::Empty>("reset_integrator");
+  _intResetClient    = nh.serviceClient<std_srvs::Empty>("reset_integrator");
   _forceDisarmClient = nh.serviceClient<mavros_msgs::CommandLong>("mavros/cmd/command");
   initializeParameters();
 
@@ -146,7 +146,7 @@ bool uav_reference::CarrotReference::landServiceCb(std_srvs::SetBool::Request&  
       return true;
     }
 
-    _landCounter = 0;
+    _landCounter       = 0;
     _lastAltDifference = 0;
     resetCarrot();
     _carrotLandTimer.start();
@@ -375,9 +375,6 @@ void uav_reference::CarrotReference::updateCarrotZ(double zOff)
 
 void uav_reference::CarrotReference::publishCarrotSetpoint()
 {
-  tf2::Quaternion q;
-  q.setEulerZYX(_carrotYaw, 0, 0);
-
   // Publish PoseStamped carrot reference
   _pubCarrotTrajectorySp.publish(_carrotPoint);
 
@@ -387,15 +384,15 @@ void uav_reference::CarrotReference::publishCarrotSetpoint()
   pose.pose.position.x    = _carrotPoint.transforms[0].translation.x;
   pose.pose.position.y    = _carrotPoint.transforms[0].translation.y;
   pose.pose.position.z    = _carrotPoint.transforms[0].translation.z;
-  pose.pose.orientation.x = q.getX();
-  pose.pose.orientation.y = q.getY();
-  pose.pose.orientation.z = q.getZ();
-  pose.pose.orientation.w = q.getW();
+  pose.pose.orientation.x = _carrotPoint.transforms[0].rotation.x;
+  pose.pose.orientation.y = _carrotPoint.transforms[0].rotation.y;
+  pose.pose.orientation.z = _carrotPoint.transforms[0].rotation.z;
+  pose.pose.orientation.w = _carrotPoint.transforms[0].rotation.w;
   _pubCarrotPose.publish(pose);
 
   // Publish referent yaw message
   std_msgs::Float64 yawRefMsg;
-  yawRefMsg.data = _carrotYaw;
+  yawRefMsg.data = ros_convert::calculateYaw(_carrotPoint.transforms[0].rotation);
   _pubCarrotYawSp.publish(yawRefMsg);
 }
 
@@ -508,53 +505,49 @@ void uav_reference::CarrotReference::land_loop(const ros::TimerEvent& e)
   _carrotPoint.transforms[0].translation.z -= _landSpeed * CARROT_DT;
 
   double curr_difference = abs(_carrotPoint.transforms[0].translation.z - _uavPos[2]);
-  if (curr_difference > 1 && curr_difference > _lastAltDifference)
-  {
+  if (curr_difference > 1 && curr_difference > _lastAltDifference) {
     _landCounter++;
     ROS_INFO("CarrotReference::land_loop - land counter at %d", _landCounter);
-  }
-  else {
+  } else {
     ROS_FATAL_THROTTLE(2.0, "Land counter reset");
     _landCounter = 0;
   }
   _lastAltDifference = curr_difference;
 
-  if (!m_handlerState.getData().armed || _landCounter > 50)  {
+  if (!m_handlerState.getData().armed || _landCounter > 50) {
     ROS_INFO("CarrotReference::land_loop - land happened.");
     _takeoffHappened = false;
     _carrotOnLand    = true;
     _positionHold    = false;
     _carrotLandTimer.stop();
 
-    if (_landDisarmEnabled)
-    {
-      mavros_msgs::CommandLong::Request disarm_req;
+    if (_landDisarmEnabled) {
+      mavros_msgs::CommandLong::Request  disarm_req;
       mavros_msgs::CommandLong::Response disarm_resp;
 
-      disarm_req.broadcast = false;
-      disarm_req.command = 400;
+      disarm_req.broadcast    = false;
+      disarm_req.command      = 400;
       disarm_req.confirmation = 0;
-      disarm_req.param1 = 0;
-      disarm_req.param2 = 21196;
-      disarm_req.param3 = 0;
-      disarm_req.param4 = 0;
-      disarm_req.param5 = 0;
-      disarm_req.param6 = 0;
-      disarm_req.param7 = 0;
+      disarm_req.param1       = 0;
+      disarm_req.param2       = 21196;
+      disarm_req.param3       = 0;
+      disarm_req.param4       = 0;
+      disarm_req.param5       = 0;
+      disarm_req.param6       = 0;
+      disarm_req.param7       = 0;
 
-      if (!_forceDisarmClient.call(disarm_req, disarm_resp))
-      {
+      if (!_forceDisarmClient.call(disarm_req, disarm_resp)) {
         ROS_FATAL("CarrotReference::land_loop - unable to call disarm client!");
         return;
       }
 
-      if (disarm_resp.success)
-      {
+      if (disarm_resp.success) {
         ROS_INFO("CarrotReference::land_loop - UAV successfully disarmed!");
         return;
       }
 
-      ROS_WARN("CarrotReference::land_loop - Disarm failed with message %d", disarm_resp.result);
+      ROS_WARN("CarrotReference::land_loop - Disarm failed with message %d",
+               disarm_resp.result);
     }
   }
 }

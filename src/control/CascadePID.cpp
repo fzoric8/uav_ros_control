@@ -38,7 +38,6 @@ uav_controller::CascadePID::CascadePID(ros::NodeHandle& nh)
   initializeParameters(nh);
   _velRefPub  = nh.advertise<geometry_msgs::Vector3>("carrot/velocity", 1);
   _velCurrPub = nh.advertise<geometry_msgs::Vector3>("uav/velocity", 1);
-  _yawRefSub = nh.subscribe("carrot/yaw", 1, &uav_controller::CascadePID::yawRefCb, this);
   _carrotStateSub =
     nh.subscribe("carrot/status", 1, &uav_controller::CascadePID::carrotStatusCb, this);
 
@@ -73,11 +72,6 @@ bool uav_controller::CascadePID::activationPermission()
 void uav_controller::CascadePID::carrotStatusCb(const std_msgs::StringConstPtr& msg)
 {
   _carrotStatus = msg->data;
-}
-
-void uav_controller::CascadePID::yawRefCb(const std_msgs::Float64ConstPtr& msg)
-{
-  _yawRef = msg->data;
 }
 
 void uav_controller::CascadePID::positionParamsCb(
