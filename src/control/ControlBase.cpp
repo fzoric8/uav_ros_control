@@ -121,6 +121,7 @@ void uav_controller::ControlBase::trajPointCb(
   _currentReference.transforms[0]    = msg->transforms[0];
   _currentReference.velocities[0]    = msg->velocities[0];
   _currentReference.accelerations[0] = msg->accelerations[0];
+  _yawRef = ros_convert::calculateYaw(msg->transforms[0].rotation);
 }
 
 std::array<double, 3> uav_controller::ControlBase::getReferentRPY()

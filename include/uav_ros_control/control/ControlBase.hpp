@@ -106,6 +106,11 @@ public:
   void overrideRollTarget(double newRoll);
   void overrideYawTarget(double newYaw);
 
+protected:
+
+  /** Yaw reference */
+  double _yawRef = 0;
+
 private:
   /**
    * Odometry callback function.
@@ -143,6 +148,7 @@ private:
 
   /** Current carrot reference */
   trajectory_msgs::MultiDOFJointTrajectoryPoint _currentReference;
+
 
   /** Declare all subscribers **/
   ros::Subscriber _subOdom;

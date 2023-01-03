@@ -345,9 +345,6 @@ void uav_reference::CarrotReference::updateCarrotZ(double zOff)
 
 void uav_reference::CarrotReference::publishCarrotSetpoint()
 {
-  tf2::Quaternion q;
-  q.setEuler(_carrotYaw, 0, 0);
-
   // Publish PoseStamped carrot reference
   _pubCarrotTrajectorySp.publish(_carrotPoint);
 
@@ -357,15 +354,15 @@ void uav_reference::CarrotReference::publishCarrotSetpoint()
   pose.pose.position.x    = _carrotPoint.transforms[0].translation.x;
   pose.pose.position.y    = _carrotPoint.transforms[0].translation.y;
   pose.pose.position.z    = _carrotPoint.transforms[0].translation.z;
-  pose.pose.orientation.x = q.getX();
-  pose.pose.orientation.y = q.getY();
-  pose.pose.orientation.z = q.getZ();
-  pose.pose.orientation.w = q.getW();
+  pose.pose.orientation.x = _carrotPoint.transforms[0].rotation.x;
+  pose.pose.orientation.y = _carrotPoint.transforms[0].rotation.y;
+  pose.pose.orientation.z = _carrotPoint.transforms[0].rotation.z;
+  pose.pose.orientation.w = _carrotPoint.transforms[0].rotation.w;
   _pubCarrotPose.publish(pose);
 
   // Publish referent yaw message
   std_msgs::Float64 yawRefMsg;
-  yawRefMsg.data = _carrotYaw;
+  yawRefMsg.data = ros_convert::calculateYaw(_carrotPoint.transforms[0].rotation);
   _pubCarrotYawSp.publish(yawRefMsg);
 }
 

@@ -120,8 +120,6 @@ private:
   /** Feed-forward gain for linear acceleration reference. */
   double _ffGainAccelerationX = 0, _ffGainAccelerationY = 0, _ffGainAccelerationZ = 0;
 
-  /** Yaw reference */
-  double _yawRef = 0;
 
   /** Define Dynamic Reconfigure parameters **/
   boost::recursive_mutex _posConfigMutex;
@@ -137,8 +135,6 @@ private:
   ros::Publisher _velRefPub;
   ros::Publisher _velCurrPub;
 
-  /** Yaw reference subscriber. */
-  ros::Subscriber _yawRefSub;
   ros::Subscriber _carrotStateSub;
   std::string _carrotStatus;
 };
