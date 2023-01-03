@@ -23,7 +23,7 @@ Argument **control_type** denotes the control program used:
 * pid_cascade_node_px4 - PX4 compatible control using roll-pitch-yaw-thrust commands
 * pid_cascade_node_px4_yawrate - PX4 compatible control using roll-pitch-yawrate-thrust commands
 
-### **PositionControlNode** 
+### PositionControlNode
 An implementation of a cascade PID UAV control scheme  
 * Subscribed topic **odometry** 
   * ```nav_msgs::Odometry```
@@ -35,10 +35,9 @@ An implementation of a cascade PID UAV control scheme
   * ```mavros_msgs::AttitudeTarget```
   * calculated UAV attitude and thrust target
 
-### **CarrotReferenceNode**
+### CarrotReferenceNode
+
 Used for publishing trajectory setpoints either through RC control or published topic  
-* Parameter **manual_takeoff**
-  * Enables automatic takeoff if set to *true*
 * Parameters **carrot_index** and **carrot_enable**
   * Specify joy button that enables RC UAV control
 * Service **takeoff**
@@ -64,3 +63,22 @@ Used for publishing trajectory setpoints either through RC control or published 
 * Published topic **carrot/trajectory** 
   * ```trajectory_msgs::MultiDOFJointTrajectoryPoint``` 
   * current UAV referent trajectory point
+
+#### State machine diagram
+
+<div style="text-align:center">
+  <img src="carrot_state_machine.svg" />
+</div>
+
+State machine diagram is obtained using [smcat](https://github.com/sverweij/state-machine-cat) via the command:
+```bash
+smcat --direction left-right --engine circo carrot_state_machine.smcat
+```
+
+Modes available in the CarrotReferenceNode are as follows:
+* OFF - RC trigger (determined by **carrot_index** and **carrot_enable** parameters) is turned off
+* GROUNDED - UAV is ond the ground, ready to takeoff
+* CARROT - UAV is flying in ```carrot-on-a-stick``` mode, controlled via RC commands
+* HOLD - UAV is holding position and awaiting ```position_hold/trajectory``` commands
+* TAKEOFF - UAV is in the process of taking off
+* LAND - UAV is in the process of landing

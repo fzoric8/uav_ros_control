@@ -1,0 +1,15 @@
+OFF,
+GROUNDED,
+TAKEOFF,
+LAND,
+HOLD,
+CARROT;
+
+OFF -> GROUNDED : NOT armed and RC ON;
+OFF -> CARROT : armed and RC ON;
+GROUNDED -> TAKEOFF : Takeoff request;
+TAKEOFF -> HOLD : Takeoff completed;
+HOLD -> CARROT : RC inputs active;
+CARROT -> HOLD : Position_hold request;
+HOLD -> LAND : Land request;
+LAND -> GROUNDED : Land completed;
