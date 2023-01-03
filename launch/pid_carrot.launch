@@ -6,7 +6,6 @@
     <arg name="hold_trajectory"       default="position_hold/trajectory"/>
     <arg name="msf_callback_enable"   default="false"/>
     <arg name="local_callback_enable" default="false"/>
-    <arg name="manual_takeoff"        default="true"/>
     <arg name="control_type"          default="pid_cascade_node"/>
     <arg name="default_params"        default="$(find uav_ros_control)/config/control/position_control.params.yaml"/>
     <arg name="carrot_frame_id"       default="world"/>
@@ -19,7 +18,6 @@
         <arg name="ref"             value="$(arg carrot_out)"/>
         <arg name="odom"            value="$(arg odometry)"/>
         <arg name="hold_trajectory" value="$(arg hold_trajectory)"/>
-        <arg name="manual_takeoff"  value="$(arg manual_takeoff)"/>
         <arg name="carrot_frame_id" value="$(arg carrot_frame_id)"/>
         <arg name="carrot_land"     value="$(arg carrot_land)"/>
         <arg name="land_disarm_enabled" value="$(arg land_disarm_enabled)"/>

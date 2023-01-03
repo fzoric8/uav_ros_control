@@ -6,7 +6,6 @@
     <arg name="joy_config"      default="joy_control_input.config.yaml"/>
     <arg name="carrot_index"    default="5"/>
     <arg name="carrot_enable"   default="1"/>
-    <arg name="manual_takeoff"  default="true"/>
     <arg name="carrot_frame_id" default="world"/>
     <arg name="carrot_land"     default="false"/>
     <arg name="carrot_config"   default="$(find uav_ros_control)/config/reference/carrot_config.yaml"/>
@@ -29,7 +28,6 @@
             <!-- Private parameters -->
             <param name="carrot_index"      value="$(arg carrot_index)" />
             <param name="carrot_enable"     value="$(arg carrot_enable)"/>
-            <param name="manual_takeoff"    value="$(arg manual_takeoff)"/>
             <param name="carrot_frame_id"   value="$(arg carrot_frame_id)"/>
             <param name="carrot_land"       value="$(arg carrot_land)"/>
             <param name="land_disarm_enabled" value="$(arg land_disarm_enabled)"/>
