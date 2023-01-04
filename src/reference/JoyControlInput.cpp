@@ -5,17 +5,18 @@
 /** Minimum value for joy to be considered active. */
 #define MIN_ACTIVE_VALUE 0.01
 
-uav_reference::JoyControlInput::JoyControlInput(ros::NodeHandle &nh)
+uav_reference::JoyControlInput::JoyControlInput(ros::NodeHandle& nh,
+                                                ros::NodeHandle& nh_private)
   : _controlIndices(new joy_struct::ControlIndices),
     _attitudeScales(new joy_struct::ScaleWeights),
     _positionScales(new joy_struct::ScaleWeights)
 {
   // Initialize JoyMsg
-  _joyMsg.axes = std::vector<float>(10, 0.0);
+  _joyMsg.axes    = std::vector<float>(10, 0.0);
   _joyMsg.buttons = std::vector<int>(10, 0);
 
   // Initialize class parameters
-  uav_reference::JoyControlInput::initializeParameters(nh);
+  uav_reference::JoyControlInput::initializeParameters(nh_private);
 
   // Initialize Joy subscriber
   _subJoy = nh.subscribe("joy", 1, &uav_reference::JoyControlInput::joyCb, this);
@@ -23,7 +24,7 @@ uav_reference::JoyControlInput::JoyControlInput(ros::NodeHandle &nh)
 
 uav_reference::JoyControlInput::~JoyControlInput() {}
 
-void uav_reference::JoyControlInput::joyCb(const sensor_msgs::JoyConstPtr &message)
+void uav_reference::JoyControlInput::joyCb(const sensor_msgs::JoyConstPtr& message)
 {
   _joyMsg = *message;
 }
@@ -81,7 +82,7 @@ bool uav_reference::JoyControlInput::isJoyActive()
          || abs(_joyMsg.axes[_controlIndices->AXIS_ANGULAR_YAW]) > MIN_ACTIVE_VALUE;
 }
 
-void uav_reference::JoyControlInput::initializeParameters(ros::NodeHandle &nh)
+void uav_reference::JoyControlInput::initializeParameters(ros::NodeHandle& nh)
 {
   ROS_WARN("JoyControlInput::initializeParameters()");
 

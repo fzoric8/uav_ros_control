@@ -42,7 +42,7 @@ public:
    * Default constructor. Used for reading ROS parameters and initalizing
    * private variables.
    */
-  CarrotReference(ros::NodeHandle&);
+  CarrotReference(ros::NodeHandle& nh, ros::NodeHandle& nh_private);
   virtual ~CarrotReference();
 
   /**

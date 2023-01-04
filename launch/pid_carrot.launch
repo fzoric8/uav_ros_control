@@ -8,9 +8,6 @@
     <arg name="local_callback_enable" default="false"/>
     <arg name="control_type"          default="pid_cascade_node"/>
     <arg name="default_params"        default="$(find uav_ros_control)/config/control/position_control.params.yaml"/>
-    <arg name="carrot_frame_id"       default="world"/>
-    <arg name="carrot_land"           default="false"/>
-    <arg name="land_disarm_enabled"   default="false"/>
     <arg name="carrot_config"         default="$(find uav_ros_control)/config/reference/carrot_config.yaml" />
     <arg name="geofence_enabled"      default="false"/>
     <arg name="geofence_config"       default="$(find uav_ros_control)/config/reference/geofence_constraints.yaml"/>
@@ -22,9 +19,6 @@
         <arg name="ref"             value="$(arg carrot_out)"/>
         <arg name="odom"            value="$(arg odometry)"/>
         <arg name="hold_trajectory" value="$(arg hold_trajectory)"/>
-        <arg name="carrot_frame_id" value="$(arg carrot_frame_id)"/>
-        <arg name="carrot_land"     value="$(arg carrot_land)"/>
-        <arg name="land_disarm_enabled" value="$(arg land_disarm_enabled)"/>
         <arg name="carrot_config"   value="$(arg carrot_config)"/>
     </include>
     

@@ -12,8 +12,9 @@
 #include <math.h>
 #include <mavros_msgs/CommandLong.h>
 
-uav_reference::CarrotReference::CarrotReference(ros::NodeHandle& nh)
-  : m_handlerState(nh, "mavros/state"), uav_reference::JoyControlInput(nh)
+uav_reference::CarrotReference::CarrotReference(ros::NodeHandle& nh,
+                                                ros::NodeHandle& nh_private)
+  : m_handlerState(nh, "mavros/state"), uav_reference::JoyControlInput(nh, nh_private)
 {
   // Define Publishers
   _pubCarrotTrajectorySp =

@@ -22,7 +22,7 @@ public:
    * Default constructor. Used for reading ROS parameters and initalizing
    * private variables.
    */
-  JoyControlInput(ros::NodeHandle &);
+  JoyControlInput(ros::NodeHandle& nh, ros::NodeHandle& nh_private);
   virtual ~JoyControlInput();
 
   /**
@@ -89,12 +89,12 @@ private:
   /**
    * Joystick callback function.
    */
-  void joyCb(const sensor_msgs::JoyConstPtr &message);
+  void joyCb(const sensor_msgs::JoyConstPtr& message);
 
   /**
    * Do all the parameter initialization here.
    */
-  void initializeParameters(ros::NodeHandle &nh);
+  void initializeParameters(ros::NodeHandle& nh);
 
   /** Current Joy message set in the /joy callback function. */
   sensor_msgs::Joy _joyMsg;
