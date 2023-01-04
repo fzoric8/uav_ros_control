@@ -171,9 +171,9 @@ private:
   std::string _frameId;
 
   /* First pass flag - set carrot to odometry */
-  bool _firstPass            = true;
-  bool _carrotLandEnabled    = true;
-  bool _landDisarmEnabled    = false;
+  bool _firstPass         = true;
+  bool _carrotLandEnabled = true;
+  bool _landDisarmEnabled = false;
 
   /** Define all Publishers */
   ros::Publisher _pubCarrotTrajectorySp;
@@ -206,15 +206,11 @@ private:
   double     _landSpeed             = 0.3;
   double     _land_altitude_request = 0.0;
   void       land_loop(const ros::TimerEvent& e);
+
+  ros::Timer _carrotUpdateTimer;
+  void       carrot_update_loop(const ros::TimerEvent& e);
 };
 
-/**
- * Run default Carrot Reference publishing node program.
- *
- * @param cc - Reference to CarrotReference object
- * @param nh - Given NodeHandle
- */
-void runDefault(uav_reference::CarrotReference& cc, ros::NodeHandle& nh);
 }// namespace uav_reference
 
 #endif /** CARROT_REFERENCE_H */

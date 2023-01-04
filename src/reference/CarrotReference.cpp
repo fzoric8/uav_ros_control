@@ -61,6 +61,9 @@ uav_reference::CarrotReference::CarrotReference(ros::NodeHandle& nh,
                                     this,
                                     false,
                                     false);
+
+  _carrotUpdateTimer = nh.createTimer(
+    ros::Rate(1 / CARROT_DT), &uav_reference::CarrotReference::carrot_update_loop, this);
 }
 
 uav_reference::CarrotReference::~CarrotReference() {}
@@ -511,17 +514,9 @@ void uav_reference::CarrotReference::land_loop(const ros::TimerEvent& e)
   }
 }
 
-void uav_reference::runDefault(uav_reference::CarrotReference& carrotRefObj,
-                               ros::NodeHandle&                nh)
+void uav_reference::CarrotReference::carrot_update_loop(const ros::TimerEvent& /*unused*/)
 {
-  double    rate = 1 / CarrotReference::CARROT_DT;
-  ros::Rate loopRate(rate);
-
-  while (ros::ok()) {
-    ros::spinOnce();
-    carrotRefObj.updateCarrotStatus();
-    carrotRefObj.updateCarrot();
-    carrotRefObj.publishCarrotSetpoint();
-    loopRate.sleep();
-  }
+  updateCarrotStatus();
+  updateCarrot();
+  publishCarrotSetpoint();
 }
