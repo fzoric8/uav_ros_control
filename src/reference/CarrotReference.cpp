@@ -1,6 +1,7 @@
 #include "ros/forwards.h"
 #include <uav_ros_lib/ros_convert.hpp>
 #include <uav_ros_lib/param_util.hpp>
+#include <uav_ros_lib/attitude_converter.hpp>
 #include <uav_ros_control/reference/CarrotReference.hpp>
 #include <geometry_msgs/PoseStamped.h>
 #include <std_msgs/String.h>
@@ -255,7 +256,7 @@ void uav_reference::CarrotReference::updateCarrot()
     updateCarrotXY();
     updateCarrotZ();
     updateCarrotYaw();
-  } else if (current_state == OFF) {
+  } else if (current_state == OFF || current_state == GROUNDED) {
     ROS_INFO_THROTTLE(10.0, "CarrotReference::update - reset to odom.");
     resetCarrot();
   }
@@ -272,9 +273,8 @@ void uav_reference::CarrotReference::resetCarrot()
   _carrotPoint.transforms[0].translation.z = _uavPos[2];
 
   // Set carrot orientation
-  _carrotYaw = _uavYaw;
-  tf2::Quaternion q;
-  q.setEuler(_carrotYaw, 0, 0);
+  _carrotYaw        = _uavYaw;
+  tf2::Quaternion q = ros_convert::AttitudeConverter(0, 0, _carrotYaw);
   _carrotPoint.transforms[0].rotation.x = q.getX();
   _carrotPoint.transforms[0].rotation.y = q.getY();
   _carrotPoint.transforms[0].rotation.z = q.getZ();
@@ -303,6 +303,7 @@ void uav_reference::CarrotReference::odomCb(const nav_msgs::OdometryConstPtr& ms
   _uavPos[2] = msg->pose.pose.position.z;
 
   if (_firstPass) {
+    ROS_INFO("CarrotReference - odometry first pass!");
     _firstPass = false;
     resetCarrot();
   }
@@ -314,8 +315,7 @@ void uav_reference::CarrotReference::updateCarrotYaw()
   _carrotYaw += getYawSpManual();
   _carrotYaw = ros_convert::wrapMinMax(_carrotYaw, -M_PI, M_PI);
 
-  tf2::Quaternion q;
-  q.setEuler(_carrotYaw, 0, 0);
+  tf2::Quaternion q = ros_convert::AttitudeConverter(0, 0, _carrotYaw);
   _carrotPoint.transforms[0].rotation.x = q.getX();
   _carrotPoint.transforms[0].rotation.y = q.getY();
   _carrotPoint.transforms[0].rotation.z = q.getZ();
