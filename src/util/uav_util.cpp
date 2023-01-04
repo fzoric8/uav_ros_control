@@ -43,7 +43,7 @@ bool uav_util::automatic_takeoff(ros::NodeHandle &nh,
 
   // Swith to GUIDED mode
   mavros_msgs::SetMode guided_request;
-  guided_request.request.custom_mode = "GUIDED";
+  guided_request.request.custom_mode = "GUIDED_NOGPS";
   guided_request.request.base_mode = 0;
   auto call_success = set_mode_client.call(guided_request);
   if (!call_success || !guided_request.response.mode_sent) {

@@ -1,6 +1,7 @@
 #include "ros/forwards.h"
 #include <uav_ros_lib/ros_convert.hpp>
 #include <uav_ros_lib/param_util.hpp>
+#include <uav_ros_lib/attitude_converter.hpp>
 #include <uav_ros_control/reference/CarrotReference.hpp>
 #include <geometry_msgs/PoseStamped.h>
 #include <std_msgs/String.h>
@@ -12,13 +13,9 @@
 #include <math.h>
 #include <mavros_msgs/CommandLong.h>
 
-#define CARROT_OFF "OFF"
-#define CARROT_ON_LAND "CARROT_ON_LAND"
-#define CARROT_ON_AIR "CARROT_ON_AIR"
-#define POS_HOLD "HOLD"
-
-uav_reference::CarrotReference::CarrotReference(ros::NodeHandle& nh)
-  : m_handlerState(nh, "mavros/state"), uav_reference::JoyControlInput(nh)
+uav_reference::CarrotReference::CarrotReference(ros::NodeHandle& nh,
+                                                ros::NodeHandle& nh_private)
+  : m_handlerState(nh, "mavros/state"), uav_reference::JoyControlInput(nh, nh_private)
 {
   // Define Publishers
   _pubCarrotTrajectorySp =
@@ -48,11 +45,6 @@ uav_reference::CarrotReference::CarrotReference(ros::NodeHandle& nh)
   _forceDisarmClient = nh.serviceClient<mavros_msgs::CommandLong>("mavros/cmd/command");
   initializeParameters();
 
-  if (!_manualTakeoffEnabled) {
-    ROS_WARN("CarrotReference - Automatic takeoff enabled, position hold disabled");
-    _positionHold = false;
-  }
-
   // Initialize references
   _carrotPoint.transforms    = std::vector<geometry_msgs::Transform>(1);
   _carrotPoint.velocities    = std::vector<geometry_msgs::Twist>(1);
@@ -69,79 +61,63 @@ uav_reference::CarrotReference::CarrotReference(ros::NodeHandle& nh)
                                     this,
                                     false,
                                     false);
+
+  _carrotUpdateTimer = nh.createTimer(
+    ros::Rate(1 / CARROT_DT), &uav_reference::CarrotReference::carrot_update_loop, this);
 }
 
 uav_reference::CarrotReference::~CarrotReference() {}
 
+void uav_reference::CarrotReference::setCarrotState(const CarrotState& new_state)
+{
+  std::lock_guard<std::mutex> lock(_carrotStateMutex);
+  ROS_INFO_STREAM("CarrotReference::setCarrotState - Switch " << _carrotState << " to "
+                                                              << new_state);
+  _carrotState = new_state;
+}
+
+uav_reference::CarrotState uav_reference::CarrotReference::getCarrotState()
+{
+  std::lock_guard<std::mutex> lock(_carrotStateMutex);
+  return _carrotState;
+}
+
 bool uav_reference::CarrotReference::posHoldServiceCb(std_srvs::Empty::Request&  request,
                                                       std_srvs::Empty::Response& response)
 {
-  if (!_carrotEnabled) {
-    ROS_FATAL(
-      "CarrotReference::posHoldServiceCb - unable to activate POSITION_HOLD, carrot not "
-      "enabled");
+  auto current_state = getCarrotState();
+  if (current_state != CARROT) {
+    ROS_FATAL_STREAM("CarrotReference::posHoldServiceCb - unable to activate HOLD from "
+                     << current_state);
     return true;
   }
 
-  if (_carrotOnLand) {
-    ROS_FATAL(
-      "CarrotReference::posHoldServiceCb - unable to activate POSITION_HOLD, carrot on "
-      "land");
-    return true;
-  }
-
-  if (!_positionHold) {
-    ROS_WARN("CarrotReference::posHoldServiceCb - Position hold enabled");
-    _positionHold = true;
-    resetCarrot();
-  }
-
+  setCarrotState(HOLD);
+  resetCarrot();
   return true;
 }
 
 bool uav_reference::CarrotReference::landServiceCb(std_srvs::SetBool::Request&  request,
                                                    std_srvs::SetBool::Response& response)
 {
-  const auto set_response = [&response](bool success) { response.success = success; };
+  const auto set_response  = [&response](bool success) { response.success = success; };
+  auto       current_state = getCarrotState();
 
-  if (_manualTakeoffEnabled) {
-    ROS_FATAL("CarrotReference::landServiceCb - unable to land, in MANUAL_TAKEOFF.");
-    set_response(false);
-    return true;
-  }
-
-  if (m_handlerState.getData().mode != "GUIDED_NOGPS") {
-    ROS_FATAL(
-      "CarrotReference::landServiceCb - unable to land, not in GUIDED_NOGPS mode");
-    set_response(false);
-    return true;
-  }
-
-  if (!_carrotEnabled) {
-    ROS_FATAL("CarrotReference::landServiceCb - unable to land, CARROT disabled");
-    set_response(false);
-    return true;
-  }
-
-  if (_carrotOnLand || !_takeoffHappened) {
-    ROS_FATAL("CarrotReference::landServiceCb - unable to land, UAV on land");
-    set_response(false);
-    return true;
-  }
-
-  if (!request.data) {
-    ROS_FATAL("CarrotReference::landServiceCb - request to not land recieved.");
+  auto mavros_state = m_handlerState.getData().mode;
+  if (mavros_state != "GUIDED_NOGPS") {
+    ROS_FATAL_STREAM(
+      "CarrotReference::landServiceCb - unable to land, GUIDED_NOGPS mode expected, but "
+      "got "
+      << mavros_state);
     set_response(false);
     return true;
   }
 
   if (_carrotLandEnabled) {
-
     // Can't land in carrot if position hold is not enabled
-    if (!_positionHold) {
-      ROS_FATAL(
-        "CarrotReference::landServiceCb - Carrot Landing is enabled but position hold is "
-        "disabled.");
+    if (current_state != HOLD) {
+      ROS_FATAL_STREAM("CarrotReference::landServiceCb - HOLD expected, but got "
+                       << current_state);
       set_response(false);
       return true;
     }
@@ -149,13 +125,23 @@ bool uav_reference::CarrotReference::landServiceCb(std_srvs::SetBool::Request&  
     _landCounter       = 0;
     _lastAltDifference = 0;
     resetCarrot();
+    setCarrotState(LAND);
     _carrotLandTimer.start();
     ROS_INFO("CarrotReference::landServiceCb - Carrot Land started");
     set_response(true);
     return true;
   }
 
-  // Assume we want to land at this point
+  // Switch to 'LAND' mode only from CARROT or HOLD
+  if (current_state != CARROT && current_state != HOLD) {
+    ROS_FATAL(
+      "CarrotReference::landServiceCb - switching to LAND mode failed, not in "
+      "CARROT/HOLD");
+    set_response(false);
+    return true;
+  }
+
+  // Assume we want to land using the LAND mode
   mavros_msgs::SetMode::Request  landMode_req;
   mavros_msgs::SetMode::Response landMode_resp;
   landMode_req.custom_mode = "LAND";
@@ -166,8 +152,9 @@ bool uav_reference::CarrotReference::landServiceCb(std_srvs::SetBool::Request&  
     return true;
   }
 
-  ROS_INFO("Carrotreference::landServiceCb - LAND finished");
+  ROS_INFO("Carrotreference::landServiceCb - LAND request finished");
   set_response(true);
+  setCarrotState(LAND);
   return true;
 }
 
@@ -183,9 +170,12 @@ bool uav_reference::CarrotReference::takeoffServiceCb(
       response.message = "Takeoff unsucessful";
     }
   };
+  auto current_state = getCarrotState();
 
-  if (_manualTakeoffEnabled) {
-    ROS_FATAL("CarrotReference::takeoffServiceCb - unable to takeoff, in MANUAL_TAKEOFF");
+  if (current_state != GROUNDED) {
+    ROS_FATAL_STREAM(
+      "CarrotReference::takeoffServiceCb - unable to takeoff, GROUNDED expcted, but got "
+      << current_state);
     set_response(false);
     return true;
   }
@@ -193,22 +183,6 @@ bool uav_reference::CarrotReference::takeoffServiceCb(
   // Check if the UAV is armed
   if (!m_handlerState.getData().armed) {
     ROS_FATAL("CarrotReference::takeoffServiceCb - unable to takeoff, not ARMED.");
-    set_response(false);
-    return true;
-  }
-
-  // Check if carrot is enabled
-  if (!_carrotEnabled) {
-    ROS_FATAL(
-      "CarrotReference::takeoffServiceCb - unable to takeoff, carrot not enabled");
-    set_response(false);
-    return true;
-  }
-
-  if (!_carrotOnLand) {
-    ROS_FATAL(
-      "CarrotReference::takeoffServiceCb - unable to takeoff, not in CARROT_ON_LAND "
-      "mode");
     set_response(false);
     return true;
   }
@@ -223,11 +197,10 @@ bool uav_reference::CarrotReference::takeoffServiceCb(
     return true;
   }
 
-  _carrotOnLand                            = false;
-  _positionHold                            = true;
+  setCarrotState(TAKEOFF);
   _takeoff_altitude_request                = _uavPos[2] + request.rel_alt;
   _carrotPoint.transforms[0].translation.z = _uavPos[2] + _initialTakeoffHeight;
-  ROS_INFO("CarrotReference::takeoffServiceCb - enable position hold");
+  ROS_INFO("CarrotReference::takeoffServiceCb - takeoff request successful");
   _carrotTakeoffTimer.start();
 
   set_response(true);
@@ -237,7 +210,8 @@ bool uav_reference::CarrotReference::takeoffServiceCb(
 void uav_reference::CarrotReference::positionRefCb(
   const trajectory_msgs::MultiDOFJointTrajectoryPointConstPtr& posMsg)
 {
-  if (_positionHold) {
+  auto current_state = getCarrotState();
+  if (current_state == HOLD) {
     _carrotPoint = *posMsg;
     _carrotYaw   = ros_convert::calculateYaw(posMsg->transforms[0].rotation.x,
                                            posMsg->transforms[0].rotation.y,
@@ -266,26 +240,26 @@ bool uav_reference::CarrotReference::resetIntegrators()
 
 void uav_reference::CarrotReference::updateCarrot()
 {
-  // Disable Position hold if carrot inputs exist
-  if (_positionHold && isJoyActive()) {
-    ROS_WARN("Position hold disabled - resetting carrot position");
-    resetCarrot();
-    _positionHold = false;
-  }
+  auto current_state = getCarrotState();
 
-  if (_positionHold) {
+  if (current_state == HOLD) {
+    // Update position in HOLD mode
     ROS_INFO_THROTTLE(10.0,
                       "CarrotReference::update - listen to position_hold/trajectory.");
-    return;
-  }
 
-  // Update carrot unless in position hold
-  if (_carrotEnabled && !_carrotOnLand) {
+    // Disable Position hold if carrot inputs exist
+    if (isJoyActive()) {
+      ROS_WARN("CarrotReference::updateCarrot - Position hold disabled");
+      resetCarrot();
+      setCarrotState(CARROT);
+    }
+  } else if (current_state == CARROT) {
+    // Update position when in CARROT mode
     ROS_INFO_THROTTLE(10.0, "CarrotReference::update - joy update");
     updateCarrotXY();
     updateCarrotZ();
     updateCarrotYaw();
-  } else {
+  } else if (current_state == OFF || current_state == GROUNDED) {
     ROS_INFO_THROTTLE(10.0, "CarrotReference::update - reset to odom.");
     resetCarrot();
   }
@@ -293,6 +267,7 @@ void uav_reference::CarrotReference::updateCarrot()
 
 void uav_reference::CarrotReference::resetCarrot()
 {
+  // TODO: Add mutex for _carrotPoint
   _carrotPoint.transforms                  = std::vector<geometry_msgs::Transform>(1);
   _carrotPoint.velocities                  = std::vector<geometry_msgs::Twist>(1);
   _carrotPoint.accelerations               = std::vector<geometry_msgs::Twist>(1);
@@ -301,9 +276,8 @@ void uav_reference::CarrotReference::resetCarrot()
   _carrotPoint.transforms[0].translation.z = _uavPos[2];
 
   // Set carrot orientation
-  _carrotYaw = _uavYaw;
-  tf2::Quaternion q;
-  q.setEulerZYX(_carrotYaw, 0, 0);
+  _carrotYaw        = _uavYaw;
+  tf2::Quaternion q = ros_convert::AttitudeConverter(0, 0, _carrotYaw);
   _carrotPoint.transforms[0].rotation.x = q.getX();
   _carrotPoint.transforms[0].rotation.y = q.getY();
   _carrotPoint.transforms[0].rotation.z = q.getZ();
@@ -332,6 +306,7 @@ void uav_reference::CarrotReference::odomCb(const nav_msgs::OdometryConstPtr& ms
   _uavPos[2] = msg->pose.pose.position.z;
 
   if (_firstPass) {
+    ROS_INFO("CarrotReference - odometry first pass!");
     _firstPass = false;
     resetCarrot();
   }
@@ -343,8 +318,7 @@ void uav_reference::CarrotReference::updateCarrotYaw()
   _carrotYaw += getYawSpManual();
   _carrotYaw = ros_convert::wrapMinMax(_carrotYaw, -M_PI, M_PI);
 
-  tf2::Quaternion q;
-  q.setEulerZYX(_carrotYaw, 0, 0);
+  tf2::Quaternion q = ros_convert::AttitudeConverter(0, 0, _carrotYaw);
   _carrotPoint.transforms[0].rotation.x = q.getX();
   _carrotPoint.transforms[0].rotation.y = q.getY();
   _carrotPoint.transforms[0].rotation.z = q.getZ();
@@ -404,7 +378,6 @@ void uav_reference::CarrotReference::initializeParameters()
   param_util::getParamOrThrow(nhPrivate, "carrot_index", _carrotEnabledIndex);
   param_util::getParamOrThrow(nhPrivate, "carrot_enable", _carrotEnabledValue);
   param_util::getParamOrThrow(nhPrivate, "carrot_land", _carrotLandEnabled);
-  param_util::getParamOrThrow(nhPrivate, "manual_takeoff", _manualTakeoffEnabled);
   param_util::getParamOrThrow(nhPrivate, "carrot_frame_id", _frameId);
   param_util::getParamOrThrow(nhPrivate, "land_speed", _landSpeed);
   param_util::getParamOrThrow(nhPrivate, "initial_takeoff_height", _initialTakeoffHeight);
@@ -414,88 +387,78 @@ void uav_reference::CarrotReference::initializeParameters()
 
 void uav_reference::CarrotReference::updateCarrotStatus()
 {
-  // Check if we landed after takeoff happened in automatic takeoff mode
-  if (!_manualTakeoffEnabled && _takeoffHappened && !m_handlerState.getData().armed) {
+  auto current_state = getCarrotState();
+  bool is_armed      = m_handlerState.getData().armed;
+
+  // Check if we landed (disarmed) after being in an armed (flying) state
+  if (current_state != OFF && current_state != GROUNDED && !is_armed) {
     ROS_WARN("CarrotReference::updateCarrotStatus - UAV disarmed, assume LAND happened");
-    _takeoffHappened = false;
-    if (_carrotEnabled) { _carrotOnLand = true; }
+    setCarrotState(GROUNDED);
     resetCarrot();
   }
 
   // Detect enable button - rising edge
-  if (getJoyButtons()[_carrotEnabledIndex] == _carrotEnabledValue && !_carrotEnabled) {
-    if (_manualTakeoffEnabled || _takeoffHappened) {
-      _carrotEnabled = true;
-      _carrotOnLand  = false;
-      ROS_INFO("CarrotReference::updateCarrotStatus - CARROT_ON_AIR enabled.");
-      resetIntegrators();
-      resetCarrot();
-    } else if (!_carrotOnLand) {
-      ROS_INFO("CarrotReference::updateCarrotStatus - CARROT_ON_LAND enabled.");
-      _carrotEnabled = true;
-      _carrotOnLand  = true;
-      resetIntegrators();
-      resetCarrot();
+  if (getJoyButtons()[_carrotEnabledIndex] == _carrotEnabledValue
+      && current_state == OFF) {
+
+    if (is_armed) {
+      // If it is armed, the UAV is most likely flying
+      ROS_INFO("CarrotReference::updateCarrotStatus - CARROT enabled.");
+      setCarrotState(CARROT);
+    } else {
+      // UAV is not armed so it's either grounded or crashed
+      ROS_INFO("CarrotReference::updateCarrotStatus - GROUNDED enabled.");
+      setCarrotState(GROUNDED);
     }
+    resetIntegrators();
+    resetCarrot();
   }
 
   // Detect enable button - falling edge
   if (getJoyButtons()[_carrotEnabledIndex] == (1 - _carrotEnabledValue)
-      && _carrotEnabled) {
-    _carrotEnabled = false;
-    _positionHold  = false;
-    _carrotOnLand  = false;
-    resetIntegrators();
+      && current_state != OFF) {
     ROS_INFO("CarrotRefernce::updateCarrotStatus - carrot disabled.\n");
+    setCarrotState(OFF);
+    resetIntegrators();
   }
 
   // Publish carrot status.
-  std_msgs::String status;
-  if (_positionHold && _carrotEnabled) {
-    status.data = POS_HOLD;
-  } else if (!_positionHold && _carrotEnabled) {
-    if (_carrotOnLand) {
-      status.data = CARROT_ON_LAND;
-    } else {
-      status.data = CARROT_ON_AIR;
-    }
-  } else {
-    status.data = CARROT_OFF;
-  }
-
-  _pubCarrotStatus.publish(status);
+  std::stringstream ss;
+  ss << getCarrotState();
+  std_msgs::String msg;
+  msg.data = ss.str();
+  _pubCarrotStatus.publish(msg);
 }
-
-bool uav_reference::CarrotReference::isCarrotEnabled() { return _carrotEnabled; }
-
-bool uav_reference::CarrotReference::isHoldEnabled() { return _positionHold; }
 
 void uav_reference::CarrotReference::takeoff_loop(const ros::TimerEvent& e)
 {
+  auto current_state = getCarrotState();
 
-  if (!_positionHold) {
-    ROS_WARN("CarrotReference::takeoff_loop - position hold disabled, aborting takeoff!");
+  if (current_state != TAKEOFF) {
+    ROS_WARN_STREAM(
+      "CarrotReference::takeoff_loop - TAKEOFF mode disabled, current state is "
+      << current_state);
     resetCarrot();
     _carrotTakeoffTimer.stop();
     return;
   }
 
   ROS_INFO_THROTTLE(2.0, "CarrotReference::takeoff_loop");
-
   _carrotPoint.transforms[0].translation.z += _takeoffSpeed * CARROT_DT;
-
   if (_carrotPoint.transforms[0].translation.z >= _takeoff_altitude_request) {
-    ROS_INFO("CarrotReference::takeoff_loop - takeoff happened.");
-    _takeoffHappened = true;
+    ROS_INFO("CarrotReference::takeoff_loop - TAKEOFF successful.");
+    setCarrotState(HOLD);
     _carrotTakeoffTimer.stop();
   }
 }
 
 void uav_reference::CarrotReference::land_loop(const ros::TimerEvent& e)
 {
+  auto current_state = getCarrotState();
 
-  if (!_positionHold) {
-    ROS_WARN("CarrotReference::land_loop - position hold disabled, aborting land!");
+  if (current_state != LAND) {
+    ROS_WARN_STREAM("CarrotReference::land_loop - LAND mode disabled, current statte is "
+                    << current_state);
     resetCarrot();
     _carrotLandTimer.stop();
     return;
@@ -504,6 +467,7 @@ void uav_reference::CarrotReference::land_loop(const ros::TimerEvent& e)
   ROS_INFO_THROTTLE(2.0, "CarrotReference::land_loop");
   _carrotPoint.transforms[0].translation.z -= _landSpeed * CARROT_DT;
 
+  // Calculate difference
   double curr_difference = abs(_carrotPoint.transforms[0].translation.z - _uavPos[2]);
   if (curr_difference > 1 && curr_difference > _lastAltDifference) {
     _landCounter++;
@@ -516,9 +480,7 @@ void uav_reference::CarrotReference::land_loop(const ros::TimerEvent& e)
 
   if (!m_handlerState.getData().armed || _landCounter > 50) {
     ROS_INFO("CarrotReference::land_loop - land happened.");
-    _takeoffHappened = false;
-    _carrotOnLand    = true;
-    _positionHold    = false;
+    setCarrotState(GROUNDED);
     _carrotLandTimer.stop();
 
     if (_landDisarmEnabled) {
@@ -552,17 +514,9 @@ void uav_reference::CarrotReference::land_loop(const ros::TimerEvent& e)
   }
 }
 
-void uav_reference::runDefault(uav_reference::CarrotReference& carrotRefObj,
-                               ros::NodeHandle&                nh)
+void uav_reference::CarrotReference::carrot_update_loop(const ros::TimerEvent& /*unused*/)
 {
-  double    rate = 1 / CarrotReference::CARROT_DT;
-  ros::Rate loopRate(rate);
-
-  while (ros::ok()) {
-    ros::spinOnce();
-    carrotRefObj.updateCarrotStatus();
-    carrotRefObj.updateCarrot();
-    carrotRefObj.publishCarrotSetpoint();
-    loopRate.sleep();
-  }
+  updateCarrotStatus();
+  updateCarrot();
+  publishCarrotSetpoint();
 }

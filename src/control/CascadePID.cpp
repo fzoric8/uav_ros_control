@@ -4,9 +4,7 @@
 #include <mavros_msgs/OverrideRCIn.h>
 
 #define CARROT_OFF "OFF"
-#define CARROT_ON_LAND "CARROT_ON_LAND"
-#define CARROT_ON_AIR "CARROT_ON_AIR"
-#define POS_HOLD "HOLD"
+#define CARROT_GROUNDED "GROUNDED"
 
 // Define all parameter paths here
 #define PID_X_PARAM "control/pos_x"
@@ -66,7 +64,7 @@ bool uav_controller::CascadePID::intResetServiceCb(std_srvs::Empty::Request&  re
 
 bool uav_controller::CascadePID::activationPermission()
 {
-  return _carrotStatus == CARROT_ON_AIR || _carrotStatus == POS_HOLD;
+  return !(_carrotStatus == CARROT_OFF || _carrotStatus == CARROT_GROUNDED);
 }
 
 void uav_controller::CascadePID::carrotStatusCb(const std_msgs::StringConstPtr& msg)
@@ -361,10 +359,9 @@ void uav_controller::runDefault_yawrate(uav_controller::CascadePID& cascadeObj,
       ROS_WARN_THROTTLE(2, "CascadePID::runDefault - publishing zero to thrust");
       cascadeObj.overrideRollTarget(0);
       cascadeObj.overridePitchTarget(0);
-      cascadeObj.overrideYawTarget(0);  
-      cascadeObj.setThrustSp(0); 
-      cascadeObj.publishAttitudeTarget(MASK_IGNORE_RP_RATE, 0); 
-    
+      cascadeObj.overrideYawTarget(0);
+      cascadeObj.setThrustSp(0);
+      cascadeObj.publishAttitudeTarget(MASK_IGNORE_RP_RATE, 0);
     }
     cascadeObj.publishEulerSp();
     loopRate.sleep();

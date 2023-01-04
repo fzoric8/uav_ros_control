@@ -14,6 +14,21 @@
 #include <uav_ros_lib/topic_handler.hpp>
 
 namespace uav_reference {
+
+/**
+ * @brief This enum defines states for the CarrotReference.
+ *
+ */
+enum CarrotState { OFF, GROUNDED, TAKEOFF, CARROT, HOLD, LAND, EMERGENCY };
+static const char* CarrotStateStr[] = { "OFF",  "GROUNDED", "TAKEOFF",  "CARROT",
+                                        "HOLD", "LAND",     "EMERGENCY" };
+
+std::ostream& operator<<(std::ostream& os, const CarrotState& s)
+{
+  os << CarrotStateStr[s];
+  return os;
+}
+
 /**
  * "Carrot-on-a-Stick" reference publisher class. Reference is published
  * with respect to the global coordinate system.
@@ -27,7 +42,7 @@ public:
    * Default constructor. Used for reading ROS parameters and initalizing
    * private variables.
    */
-  CarrotReference(ros::NodeHandle&);
+  CarrotReference(ros::NodeHandle& nh, ros::NodeHandle& nh_private);
   virtual ~CarrotReference();
 
   /**
@@ -58,6 +73,9 @@ public:
   bool isHoldEnabled();
 
 private:
+  /**
+   * Reset controller integrators.
+   */
   bool resetIntegrators();
 
   /**
@@ -137,11 +155,11 @@ private:
   /** Current UAV yaw angle */
   double _uavYaw = 0;
 
-  /** True if carrot mode is enabled otherwise false */
-  bool _carrotEnabled = false;
-
-  /** True if position hold mode is enabled, otherwise false */
-  bool _positionHold = true;
+  /** Current carrot state */
+  std::mutex  _carrotStateMutex;
+  CarrotState _carrotState = CarrotState::OFF;
+  void        setCarrotState(const CarrotState& new_state);
+  CarrotState getCarrotState();
 
   /** Index used for enabling carrot mode */
   int _carrotEnabledIndex = -1;
@@ -153,12 +171,9 @@ private:
   std::string _frameId;
 
   /* First pass flag - set carrot to odometry */
-  bool _firstPass            = true;
-  bool _manualTakeoffEnabled = true;
-  bool _carrotLandEnabled    = true;
-  bool _landDisarmEnabled    = false;
-  bool _carrotOnLand         = false;
-  bool _takeoffHappened      = false;
+  bool _firstPass         = true;
+  bool _carrotLandEnabled = true;
+  bool _landDisarmEnabled = false;
 
   /** Define all Publishers */
   ros::Publisher _pubCarrotTrajectorySp;
@@ -191,15 +206,11 @@ private:
   double     _landSpeed             = 0.3;
   double     _land_altitude_request = 0.0;
   void       land_loop(const ros::TimerEvent& e);
+
+  ros::Timer _carrotUpdateTimer;
+  void       carrot_update_loop(const ros::TimerEvent& e);
 };
 
-/**
- * Run default Carrot Reference publishing node program.
- *
- * @param cc - Reference to CarrotReference object
- * @param nh - Given NodeHandle
- */
-void runDefault(uav_reference::CarrotReference& cc, ros::NodeHandle& nh);
 }// namespace uav_reference
 
 #endif /** CARROT_REFERENCE_H */

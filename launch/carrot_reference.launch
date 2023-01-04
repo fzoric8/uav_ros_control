@@ -1,46 +1,21 @@
 <launch>
-    <arg name="namespace"       default="$(env UAV_NAMESPACE)"/>
-    <arg name="odom"            default="mavros/global_position/local"/>
-    <arg name="ref"             default="carrot/trajectory"/>
-    <arg name="hold_trajectory" default="position_hold/trajectory"/>
-    <arg name="joy_config"      default="joy_control_input.config.yaml"/>
-    <arg name="carrot_index"    default="5"/>
-    <arg name="carrot_enable"   default="1"/>
-    <arg name="manual_takeoff"  default="true"/>
-    <arg name="carrot_frame_id" default="world"/>
-    <arg name="carrot_land"     default="false"/>
-    <arg name="carrot_config"   default="$(find uav_ros_control)/config/reference/carrot_config.yaml"/>
+    <arg name="namespace"           default="$(env UAV_NAMESPACE)"/>
+    <arg name="odom"                default="mavros/global_position/local"/>
+    <arg name="ref"                 default="carrot/trajectory"/>
+    <arg name="hold_trajectory"     default="position_hold/trajectory"/>
+    <arg name="joy_config"          default="$(find uav_ros_control)/config/reference/joy_control_input.config.yaml"/>
+    <arg name="carrot_config"       default="$(find uav_ros_control)/config/reference/carrot_config.yaml"/>
 
-    <arg name="land_disarm_enabled" default="false"/>
+    <node pkg="uav_ros_control" type="carrot_reference_node" name="carrot_reference_node" output="screen" ns="$(arg namespace)">
+  
+        <!-- Load Private parameters -->
+        <rosparam command="load" file="$(arg carrot_config)"/>
+        <rosparam command="load" file="$(arg joy_config)"/>
 
-    <group ns="$(arg namespace)">
-        <!-- Load joy configuration file-->
-        <rosparam 
-            command="load"
-            file="$(find uav_ros_control)/config/reference/$(arg joy_config)"/>
-
-        <!-- Carrot-Mode reference generator node -->
-        <node
-            pkg="uav_ros_control"
-            type="carrot_reference_node"
-            name="carrot_reference_node"
-            output="screen">
-
-            <!-- Private parameters -->
-            <param name="carrot_index"      value="$(arg carrot_index)" />
-            <param name="carrot_enable"     value="$(arg carrot_enable)"/>
-            <param name="manual_takeoff"    value="$(arg manual_takeoff)"/>
-            <param name="carrot_frame_id"   value="$(arg carrot_frame_id)"/>
-            <param name="carrot_land"       value="$(arg carrot_land)"/>
-            <param name="land_disarm_enabled" value="$(arg land_disarm_enabled)"/>
-
-            <rosparam command="load" file="$(arg carrot_config)"/>
-
-            <!-- Topic remapping -->
-            <remap from="carrot/trajectory"         to="$(arg ref)"/>
-            <remap from="odometry"                  to="$(arg odom)"/>
-            <remap from="position_hold/trajectory"  to="$(arg hold_trajectory)"/>
-        </node>
-    </group>
-
+        <!-- Topic remapping -->
+        <remap from="carrot/trajectory"         to="$(arg ref)"/>
+        <remap from="odometry"                  to="$(arg odom)"/>
+        <remap from="position_hold/trajectory"  to="$(arg hold_trajectory)"/>
+    </node>
 </launch>
+
