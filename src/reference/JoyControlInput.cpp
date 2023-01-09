@@ -95,8 +95,8 @@ void uav_reference::JoyControlInput::initializeParameters(ros::NodeHandle& nh)
   ROS_INFO_STREAM(*_controlIndices);
   if (!initialized) {
     ROS_FATAL(
-      "JoyControlInput::initializeParameters() - \ 
-			ControlIndices parameters are not properly set.");
+      "JoyControlInput::initializeParameters() - ControlIndices parameters are not "
+      "properly set.");
     throw std::runtime_error("ControlIndices parameters not properly set.");
   }
 
