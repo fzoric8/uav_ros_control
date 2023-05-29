@@ -21,7 +21,7 @@ public:
   void onInit() override;
 
 private:
-  static constexpr auto  PRE_TAKEOFF_STATUS       = "CARROT_ON_LAND";
+  static constexpr auto  PRE_TAKEOFF_STATUS       = "GROUNDED";
   const std::vector<int> CARROT_ACTIVATION_VECTOR = { 0, 0, 0, 0, 0, 1 };
   static constexpr auto  OFFBOARD_MODE            = "GUIDED_NOGPS";
   static constexpr auto  TRACKER_ACTIVE           = "ACTIVE";
