@@ -49,7 +49,7 @@ control:
     lim_high: 2.5
 
   vel_z:
-    kp: 0.18
+    kp: 0.09
     ki: 0.075
     kd: 0.0
     lim_low: -0.2
